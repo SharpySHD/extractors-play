@@ -5,11 +5,11 @@ function fresh(){return {points:0,shang:0,marks:{}}}
 try{let saved=JSON.parse(localStorage.getItem('extractorMickeyBeta'));if(saved&&saved.players&&saved.players.length===2)state=saved}catch(e){}
 function save(){try{localStorage.setItem('extractorMickeyBeta',JSON.stringify(state))}catch(e){}}
 function snapshot(){history.push(JSON.stringify(state))}
-function stop(){token++;clearInterval(clock);clock=null;if(listening){try{listening.abort()}catch(e){}listening=null}try{speechSynthesis.cancel()}catch(e){}}
-function speak(s,cb){try{if(!('speechSynthesis' in window)){cb?.();return}speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(s);u.lang='en-AU';u.rate=.95;u.onend=()=>cb?.();u.onerror=()=>cb?.();speechSynthesis.speak(u)}catch(e){cb?.()}}
+function stop(){window.extractorMusic?.duck('speech',false);token++;clearInterval(clock);clock=null;if(listening){try{listening.abort()}catch(e){}listening=null}try{speechSynthesis.cancel()}catch(e){}}
+function speak(s,cb){try{if(!('speechSynthesis' in window)){cb?.();return}speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(s);u.lang='en-AU';u.rate=.95;const finish=()=>{window.extractorMusic?.duck('speech',false);cb?.()};u.onend=finish;u.onerror=finish;window.extractorMusic?.duck('speech',true);speechSynthesis.speak(u)}catch(e){cb?.()}}
 function marks(n){return n?'X'.repeat(Math.min(n,3)):'—'}
 function header(){return `<div class="eyebrow">SHARPHUB DYNAMICS</div><div class="brand">EXTRACTOR'S PLAY</div><div class="subtitle">FEATURING THE BIG FELLA</div>`}
-function menu(){stop();$('app').innerHTML=`<div class="wrap"><section class="menu panel">${header()}<h2 style="text-align:center">SELECT GAME</h2><div class="menuButtons"><button id="mickey" class="primary">🎯 MICKEY MOUSE<br><small>PLAY BETA</small></button><button disabled>501<br><small>COMING LATER</small></button><button disabled>301<br><small>COMING LATER</small></button><button disabled>101<br><small>COMING LATER</small></button><button disabled>🌐 WORLDWIDE<br><small>COMING LATER</small></button><button disabled>👥 FRIENDS ONLINE<br><small>COMING LATER</small></button></div><p class="tiny" style="text-align:center;margin-top:25px">LOCAL 2-PLAYER BETA • TARGET OMNI NOT CONNECTED</p></section></div>`;$('mickey').onclick=()=>{state.screen='game';save();render()}}
+function menu(){stop();$('app').innerHTML=`<div class="wrap"><section class="menu panel">${header()}<div class="intro-menu-controls"><button id="replayIntro">▶ BIG FELLA INTRO</button></div><h2 style="text-align:center">SELECT GAME</h2><div class="menuButtons"><button id="mickey" class="primary">🎯 MICKEY MOUSE<br><small>PLAY BETA</small></button><button disabled>501<br><small>COMING LATER</small></button><button disabled>301<br><small>COMING LATER</small></button><button disabled>101<br><small>COMING LATER</small></button><button disabled>🌐 WORLDWIDE<br><small>COMING LATER</small></button><button disabled>👥 FRIENDS ONLINE<br><small>COMING LATER</small></button></div><p class="tiny" style="text-align:center;margin-top:25px">LOCAL 2-PLAYER BETA • TARGET OMNI NOT CONNECTED</p></section></div>`;$('replayIntro').onclick=intro;$('mickey').onclick=()=>{state.screen='game';save();render()}}
 function render(){
  if(state.screen==='menu')return menu();
  let [a,b]=state.players;
@@ -84,5 +84,25 @@ function commit(){
  let finished=T.every(t=>(p.marks[t]||0)>=3)&&p.points>=state.players[1-state.turn].points;state.phase=finished?'win':'done';save();render();$('message').textContent=finished?'WINNER!':(shanghai()?'+100 Shanghai added. ':'')+'Turn saved. Next player.';speak(finished?'Game over! Winner!':shanghai()?'Shanghai! One hundred points added.':'Turn saved.');
 }
 function undo(){if(!history.length)return;stop();state=JSON.parse(history.pop());options=[];selected=0;save();render();if(state.phase==='choose'){$('message').textContent='Previous choice restored. Select by touch.';$('listen').classList.remove('hidden')}}
+
+function intro(){
+ stop();
+ let volume=.85;
+ try{const v=Number(localStorage.getItem('extractorIntroVolume'));if(localStorage.getItem('extractorIntroVolume')!==null&&Number.isFinite(v))volume=Math.max(0,Math.min(1,v))}catch(e){}
+ $('app').innerHTML=`<div class="wrap intro-wrap">${header()}<section class="panel intro-panel"><h1>THE BIG FELLA HAS ARRIVED</h1><video id="introVideo" controls playsinline preload="metadata" poster="icon-512.png" aria-label="Extractor's Play intro featuring the Big Fella's recorded voice"><source src="media/big-fella-intro.mp4" type="video/mp4"></video><p id="introStatus" role="status">Tap Play intro to hear your recorded voice.</p><div class="row"><button id="playIntro" class="primary">▶ PLAY INTRO</button><button id="skipIntro">SELECT GAME →</button></div><label class="intro-volume" for="introVolume">INTRO VOLUME <output id="introVolumeValue">${Math.round(volume*100)}%</output><input id="introVolume" type="range" min="0" max="100" step="1" value="${Math.round(volume*100)}"></label><p class="tiny">Your recorded voice + Nexus music • Music controls below</p></section></div>`;
+ const video=$('introVideo');video.volume=volume;
+ let leaving=false;
+ const leave=()=>{if(leaving)return;leaving=true;window.extractorMusic?.duck('intro',false);video.pause();video.removeAttribute('src');video.load();state.screen='menu';save();menu()};
+ $('skipIntro').onclick=leave;
+ $('playIntro').onclick=()=>{if(video.ended)video.currentTime=0;if(!video.paused){video.pause();return}const p=video.play();if(p&&p.catch)p.catch(()=>{$('introStatus').textContent='Tap the video’s Play control to start playback in this browser.'})};
+ video.onplay=()=>{window.extractorMusic?.duck('intro',video.currentTime>=6&&video.currentTime<39);window.extractorMusic?.seek(video.currentTime);window.extractorMusic?.start();$('playIntro').textContent='Ⅱ PAUSE';$('introStatus').textContent='Playing your recorded intro.'};
+ video.onpause=()=>{window.extractorMusic?.duck('intro',false);if(!leaving&&!video.ended)window.extractorMusic?.pause();if(!leaving)$('playIntro').textContent=video.ended?'↻ REPLAY INTRO':'▶ PLAY INTRO'};
+ video.ontimeupdate=()=>{if(!leaving&&!video.paused)window.extractorMusic?.duck('intro',video.currentTime>=6&&video.currentTime<39)};
+ video.onseeked=()=>window.extractorMusic?.seek(video.currentTime);
+ video.onended=()=>{window.extractorMusic?.duck('intro',false);leave()};
+ video.onerror=()=>{if(!leaving)$('introStatus').textContent='Intro video could not load. You can still select a game.'};
+ $('introVolume').oninput=e=>{volume=Number(e.target.value)/100;video.volume=volume;video.muted=volume===0;$('introVolumeValue').textContent=Math.round(volume*100)+'%';try{localStorage.setItem('extractorIntroVolume',String(volume))}catch(e){}};
+}
+
 if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('./sw.js').catch(()=>{});
-render();
+if(state.screen==='menu')intro();else render();
