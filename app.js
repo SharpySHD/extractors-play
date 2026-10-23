@@ -34,14 +34,14 @@ function render(){
  document.querySelectorAll('[data-bull]').forEach(el=>el.onclick=()=>add({n:'BULL',m:+el.dataset.bull}));
  $('miss').onclick=()=>add({n:'MISS',m:0});
  $('undo').onclick=undo;
- $('next').onclick=()=>{if(state.phase!=='done')return;snapshot();state.turn=1-state.turn;if(state.turn===0)state.round++;state.darts=[];state.mult=1;state.phase='throw';save();render()};
+ $('next').onclick=()=>{if(state.phase!=='done')return;stop();snapshot();state.choice=0;selected=0;options=[];state.turn=1-state.turn;if(state.turn===0)state.round++;state.darts=[];state.mult=1;state.phase='throw';save();render()};
  $('listen').onclick=listen;
  $('pause').onclick=pause;
  $('confirm').onclick=commit;
- if(state.phase==='choose'){options=build();showOptions()}
+ if(state.phase==='choose'){options=build();selected=Number.isInteger(state.choice)&&state.choice>=0&&state.choice<options.length?state.choice:0;state.choice=selected;save();showOptions();$('listen').classList.remove('hidden')}
 }
 function dartLabel(d){return d.n==='MISS'?'MISS':d.n==='BULL'?(d.m===2?'RED 50':'GREEN 25'):`${['','S','D','T'][d.m]}${d.n}`}
-function add(d){if(state.phase!=='throw'||state.darts.length>=3)return;snapshot();state.darts.push(d);if(state.darts.length===3){state.phase='choose';save();render();promptDecision()}else{save();render()}}
+function add(d){if(state.phase!=='throw'||state.darts.length>=3)return;snapshot();state.darts.push(d);if(state.darts.length===3){state.phase='choose';state.choice=0;selected=0;save();render();promptDecision()}else{save();render()}}
 function getAllocations(d){if(d.n==='MISS')return [{key:'MISS',marks:0}];if(d.n==='BULL')return [{key:'BULL',marks:d.m}];let result=[{key:String(d.n),marks:d.m}];if(d.m===2)result.push({key:'DOUBLE',marks:1});if(d.m===3)result.push({key:'TRIPLE',marks:1});return result}
 function shanghai(){let d=state.darts;return d.length===3&&d.every(x=>typeof x.n==='number'&&x.n===d[0].n)&&d.map(x=>x.m).sort().join('')==='123'}
 function bed(){let d=state.darts;return d.length===3&&d.every(x=>x.n!== 'MISS'&&x.n===d[0].n)}
@@ -59,7 +59,7 @@ function build(){
 }
 function showOptions(){
  if(state.phase!=='choose')return;let box=$('choices');box.innerHTML=options.map((o,i)=>`<button class="${selected===i?'sel':''}" data-choice="${i}">OPTION ${i+1}: ${o.alloc.map(x=>x.key==='MISS'?'MISS':x.marks+' × '+x.key).join(' • ')}<small>${o.points?'+'+o.points+' scoring points • ':''}${shanghai()?'+100 Shanghai • ':''}choose this allocation</small></button>`).join('');
- box.querySelectorAll('[data-choice]').forEach(el=>el.onclick=()=>{stop();selected=+el.dataset.choice;showOptions();$('message').textContent='Option '+(selected+1)+' selected. Confirm claim?';$('seconds').textContent='✓';$('pause').classList.add('hidden');$('listen').classList.add('hidden')})
+ box.querySelectorAll('[data-choice]').forEach(el=>el.onclick=()=>{stop();selected=+el.dataset.choice;state.choice=selected;save();showOptions();$('message').textContent='Option '+(selected+1)+' selected. Confirm claim?';$('seconds').textContent='✓';$('pause').classList.add('hidden');$('listen').classList.add('hidden')})
 }
 function celebration(){let pop=document.createElement('div');pop.className='party';pop.innerHTML='<div>🎉 SHANGHAI! 🎯<small>+100 POINTS</small></div>';document.body.append(pop);setTimeout(()=>pop.remove(),2400)}
 function promptDecision(){
@@ -75,12 +75,12 @@ function listen(){
  if(Speech){try{listening=new Speech();listening.lang='en-AU';listening.continuous=true;listening.onresult=e=>{if(current!==token)return;let words=e.results[e.results.length-1][0].transcript.toLowerCase();$('info').textContent='Heard: '+words;if(/wait|hang on|hold on|pause|just a sec/.test(words)){pause();return}
  let x=words.match(/(?:option|number|choice)\s*(\d+)/);let index=x?Number(x[1])-1:-1;
  if(index<0&&/twenties out|take the twenties|all twenties/.test(words))index=options.findIndex(o=>o.alloc.every(x=>x.key==='20'));
- if(index>=0&&index<options.length){selected=index;stop();showOptions();$('message').textContent='Option '+(index+1)+' selected. Tap Confirm.';$('seconds').textContent='✓';$('pause').classList.add('hidden')}};listening.onerror=()=>{$('info').textContent='Mic unavailable. Tap an option instead.'};listening.start()}catch(e){$('info').textContent='Microphone unavailable here; select by touch.'}}else{$('info').textContent='Browser recognition unsupported. Select by touch.'}
+ if(index>=0&&index<options.length){selected=index;state.choice=selected;save();stop();showOptions();$('message').textContent='Option '+(index+1)+' selected. Tap Confirm.';$('seconds').textContent='✓';$('pause').classList.add('hidden')}};listening.onerror=()=>{$('info').textContent='Mic unavailable. Tap an option instead.'};listening.start()}catch(e){$('info').textContent='Microphone unavailable here; select by touch.'}}else{$('info').textContent='Browser recognition unsupported. Select by touch.'}
  clock=setInterval(()=>{if(current!==token){clearInterval(clock);return}count--;$('seconds').textContent=count;if(count<=0)pause()},1000);
 }
 function pause(){if(state.phase!=='choose')return;stop();$('message').textContent='No worries. Launch when ready.';$('seconds').textContent='⏸';$('listen').classList.remove('hidden');$('pause').classList.add('hidden')}
 function commit(){
- if(state.phase!=='choose')return;stop();snapshot();let o=options[selected],p=state.players[state.turn];p.marks=o.marks;p.points+=o.points+(shanghai()?100:0);if(shanghai())p.shang++;
+ if(state.phase!=='choose')return;options=build();if(!Number.isInteger(selected)||!options[selected]){selected=0;state.choice=0;save();showOptions();$('message').textContent='Please select a claim and confirm again.';return}stop();snapshot();let o=options[selected],p=state.players[state.turn];p.marks=o.marks;p.points+=o.points+(shanghai()?100:0);if(shanghai())p.shang++;
  let finished=T.every(t=>(p.marks[t]||0)>=3)&&p.points>=state.players[1-state.turn].points;state.phase=finished?'win':'done';save();render();$('message').textContent=finished?'WINNER!':(shanghai()?'+100 Shanghai added. ':'')+'Turn saved. Next player.';speak(finished?'Game over! Winner!':shanghai()?'Shanghai! One hundred points added.':'Turn saved.');
 }
 function undo(){if(!history.length)return;stop();state=JSON.parse(history.pop());options=[];selected=0;save();render();if(state.phase==='choose'){$('message').textContent='Previous choice restored. Select by touch.';$('listen').classList.remove('hidden')}}
