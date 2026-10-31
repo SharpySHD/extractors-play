@@ -10,15 +10,16 @@ try{let saved=JSON.parse(localStorage.getItem('extractorMickeyBeta'));if(saved&&
 if(state.phase==='done'&&state.reviewWaiting){state.reviewWaiting=false;delete state.handoffAt;}
 function save(){try{localStorage.setItem('extractorMickeyBeta',JSON.stringify(state))}catch(e){}}
 function snapshot(){history.push(JSON.stringify(state))}
-function stop(){clearTimeout(handoffClock);handoffClock=null;window.extractorMusic?.duck('recognition',false);window.extractorMusic?.duck('speech',false);token++;clearInterval(clock);clock=null;if(listening){try{listening.abort()}catch(e){}listening=null}try{speechSynthesis.cancel()}catch(e){}}
-function speak(s,cb,role='announcer'){try{if(!('speechSynthesis' in window)){cb?.();return}window.ExtractorSpeechBusy=true;speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(s);u.lang='en-AU';u.rate=.95;const available=speechSynthesis.getVoices?.()||[];const preferred=available.find(v=>/^en/i.test(v.lang)&&/\b(Lee|Daniel|Arthur|Gordon|Alex|David|George)\b/i.test(v.name));if(preferred){u.voice=preferred;u.lang=preferred.lang;}if(role==='mc'){let choice='';try{choice=localStorage.getItem('extractorMCVoice')||''}catch(_){}const ricky=choice==='__ricky__';const mc=(ricky?available.find(v=>/^en/i.test(v.lang)&&/\b(Daniel|Arthur|Gordon|Alex|David|George)\b/i.test(v.name)):available.find(v=>v.voiceURI===choice))||available.find(v=>/^en/i.test(v.lang)&&/\b(Lee|Alex|David)\b/i.test(v.name))||preferred;if(mc){u.voice=mc;u.lang=mc.lang}u.pitch=ricky?.92:.8;u.rate=ricky?1.02:.9;}let finished=false;const finish=()=>{if(finished)return;finished=true;window.ExtractorSpeechBusy=false;window.extractorMusic?.duck('speech',false);cb?.()};u.onend=finish;u.onerror=finish;window.extractorMusic?.duck('speech',true);speechSynthesis.speak(u)}catch(e){window.ExtractorSpeechBusy=false;cb?.()}}
+let rickySpeechGeneration=0;
+function stop(){rickySpeechGeneration++;window.ExtractorRecordedRicky?.stop();window.ExtractorSpeechBusy=false;clearTimeout(handoffClock);handoffClock=null;window.extractorMusic?.duck('recognition',false);window.extractorMusic?.duck('speech',false);token++;clearInterval(clock);clock=null;if(listening){try{listening.abort()}catch(e){}listening=null}try{speechSynthesis.cancel()}catch(e){}}
+function speak(s,cb,role='announcer'){const reaction=window.ExtractorRecordedRicky?.take();window.ExtractorRecordedRicky?.stop();const speechRun=++rickySpeechGeneration;const complete=()=>{if(speechRun!==rickySpeechGeneration)return;if(reaction&&window.ExtractorRecordedRicky)window.ExtractorRecordedRicky.reaction(reaction,cb);else cb?.()};try{if(!('speechSynthesis' in window)){complete();return}window.ExtractorSpeechBusy=true;speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(s);u.lang='en-AU';u.rate=.95;const available=speechSynthesis.getVoices?.()||[];const preferred=available.find(v=>/^en/i.test(v.lang)&&/\b(Lee|Daniel|Arthur|Gordon|Alex|David|George)\b/i.test(v.name));if(preferred){u.voice=preferred;u.lang=preferred.lang;}if(role==='mc'){let choice='';try{choice=localStorage.getItem('extractorMCVoice')||''}catch(_){}const ricky=choice==='__ricky__';const mc=(ricky?available.find(v=>/^en/i.test(v.lang)&&/\b(Daniel|Arthur|Gordon|Alex|David|George)\b/i.test(v.name)):available.find(v=>v.voiceURI===choice))||available.find(v=>/^en/i.test(v.lang)&&/\b(Lee|Alex|David)\b/i.test(v.name))||preferred;if(mc){u.voice=mc;u.lang=mc.lang}u.pitch=ricky?.92:.8;u.rate=ricky?1.02:.9;}let finished=false;const finish=()=>{if(finished||speechRun!==rickySpeechGeneration)return;finished=true;window.ExtractorSpeechBusy=false;window.extractorMusic?.duck('speech',false);complete()};u.onend=finish;u.onerror=finish;window.extractorMusic?.duck('speech',true);speechSynthesis.speak(u)}catch(e){if(speechRun===rickySpeechGeneration){window.ExtractorSpeechBusy=false;window.extractorMusic?.duck('speech',false);complete()}}}
 window.ExtractorSpeak=speak;
 // These three cue slots will use Big Fella recordings when supplied.
 function cue(name,cb){if(window.ExtractorStage)return window.ExtractorStage.say(name,cb);speak({chooseWeapon:'Choose your weapon.',selected:'Selected.',selectionTime:'Selection time.'}[name],cb)}
 function marks(n){return n?'X'.repeat(Math.min(n,3)):'—'}
 function targetClosed(key){return state.players.every(p=>(p.marks[key]||0)>=3)}
 function scoreCall(n,cb,name){const value=Math.max(0,Math.min(180,Math.round(Number(n)||0)));let choice='';try{choice=localStorage.getItem('extractorMCVoice')||''}catch(_){}speak(choice==='__ricky__'?String(value)+'. '+(name||playerName(state.turn))+'.':String(value),cb,'mc')}
-function rickyShanghai(){let choice='';try{choice=localStorage.getItem('extractorMCVoice')||''}catch(_){}if(choice==='__ricky__')speak("That's a fucking Shang dog, you goddamn son of a bitch!",null,'mc')}
+function rickyShanghai(){window.ExtractorRecordedRicky?.queue('shanghai');let choice='';try{choice=localStorage.getItem('extractorMCVoice')||''}catch(_){}if(choice==='__ricky__')speak("That's a fucking Shang dog, you goddamn son of a bitch!",null,'mc')}
 function effectSignature(o){return JSON.stringify([Object.entries(o.marks||{}).sort(),Number(o.points)||0])}
 function collapseEquivalentOptions(items){const seen=new Set();return items.filter(o=>{const sig=effectSignature(o);if(seen.has(sig))return false;seen.add(sig);return true})}
 function header(){return `<div class="eyebrow">SHARPHUB DYNAMICS</div><div class="brand">EXTRACTOR'S PLAY</div><div class="subtitle">FEATURING THE BIG FELLA</div>`}
@@ -29,7 +30,7 @@ function requestMenuMic(){
 }
 function openSettings(){
  const d=$('settingsDialog');if(!d)return;
- d.showModal();
+ d.onclose=()=>stop();d.showModal();
  const level=window.extractorMusic?.getLevel?.()??1;$('settingsVolume').value=Math.round(level*100);$('settingsVolumeValue').textContent=Math.round(level*100)+'%';
 }
 function menu(){
@@ -38,7 +39,7 @@ function menu(){
  if(state.phase==='done'&&state.reviewWaiting){state.reviewWaiting=false;delete state.handoffAt;}
  window.ExtractorStage?.cancel();document.body.classList.remove('bull-active','intro-active');document.body.classList.add('menu-active');state.screen='menu';state.needsBull=false;save();stop();
  $('app').innerHTML=`<div class="nexus-home"><section class="nexus-hero">
-   <div class="nexus-title">${header()}<p class="tiny nexus-version">PUBLIC DEVICE TEST · v0.10.8</p></div>
+   <div class="nexus-title">${header()}<p class="tiny nexus-version">PUBLIC DEVICE TEST · v0.10.9</p></div>
    <button id="settingsButton" class="settings-gear" aria-label="Settings">⚙</button>
    <div class="big-fella-decks" aria-label="Big Fella at the decks"></div>
    <div class="extractor-guard" aria-hidden="true"></div>
@@ -48,9 +49,13 @@ function menu(){
    <button id="profilesButton" class="login-button">◉ PLAYER LOGIN / REGISTER</button>
    <div id="micReady" class="mic-ready">MIC · tap Login / Register to arm</div>
    <div id="menuRoster"></div>
-   <label class="game-mode-label" for="gameMode">GAME MODE</label>
-   <select id="gameMode" class="game-mode-select"><option value="mickey">MICKEY MOUSE</option><option value="501">501</option><option value="301">301</option><option value="101">101</option></select>
-   <button id="startGame" class="primary start-game">START GAME</button>
+   <h2 class="game-mode-label">CHOOSE YOUR WEAPON</h2>
+   <div class="menuButtons" aria-label="Choose a game">
+    <button id="mickey" class="game-tile gold-tile"><span class="mickey-emblem" aria-hidden="true"><i></i><i></i><i></i></span><span class="tile-copy">MICKEY MOUSE<small>THE GOLD STANDARD</small></span></button>
+    <button data-x01="501" class="game-tile marquee-tile"><span class="extractor-head" aria-hidden="true"></span><span class="laser-line" aria-hidden="true"></span><span class="tile-copy">501<small>THE MAIN EVENT</small></span></button>
+    <button data-x01="301" class="game-tile dart-tile"><span class="tile-dart" aria-hidden="true"></span><span class="tile-copy">301<small>DOUBLE OUT</small></span></button>
+    <button data-x01="101" class="game-tile dart-tile dart-tile-two"><span class="tile-dart" aria-hidden="true"></span><span class="tile-copy">101<small>DOUBLE OUT</small></span></button>
+   </div>
  </section>
  <dialog id="settingsDialog" class="settings-dialog"><div class="settings-head"><strong>SETTINGS</strong><button id="closeSettings" aria-label="Close settings">✕</button></div>
    <div class="settings-stack">
@@ -69,7 +74,7 @@ function menu(){
  $('settingsVolume').oninput=e=>{const v=Number(e.target.value)/100;window.extractorMusic?.setLevel(v);$('settingsVolumeValue').textContent=Math.round(v*100)+'%'};$('settingsMusic').onclick=()=>{const m=window.extractorMusic?.media;if(!m)return;m.paused?window.extractorMusic.start():window.extractorMusic.pause()};
  bindMCVoices();
  const beginMickey=()=>{stop();try{localStorage.setItem('extractorActiveMode','mickey')}catch(_){}const begin=winner=>{if(winner!==undefined){state.turn=winner;state.starter=winner;state.needsBull=false}state.screen='game';save();render();window.ExtractorRicky?.refresh()};const freshGame=state.round===1&&state.phase==='throw'&&!state.darts.length&&state.players.every(p=>p.points===0&&Object.keys(p.marks).length===0);if(freshGame&&window.ExtractorStage)window.ExtractorStage.bullOff(begin);else{begin();window.extractorMusic?.fadeOut(2);cue('selected')}};
- $('startGame').onclick=()=>{clearInterval(menuCarouselTimer);const mode=$('gameMode').value;if(mode==='mickey')beginMickey();else window.ExtractorX01?.open(Number(mode))};
+ $('mickey').onclick=()=>{clearInterval(menuCarouselTimer);beginMickey()};
  window.ExtractorX01?.bindMenu();
  if(!window.ExtractorProfiles?.attachMenu())cue('chooseWeapon');
  const pb=$('profilesButton');if(pb){const original=pb.onclick;pb.onclick=async e=>{await requestMenuMic();original?.call(pb,e)}}
@@ -77,7 +82,7 @@ function menu(){
 }
 
 function bindMCVoices(){
- const select=$('mcVoice');if(!select)return;while(select.options.length>2)select.remove(2);let chosen='';try{chosen=localStorage.getItem('extractorMCVoice')||''}catch(_){}for(const voice of (window.speechSynthesis?.getVoices?.()||[]).filter(v=>/^en/i.test(v.lang))){const option=document.createElement('option');option.value=voice.voiceURI;option.textContent=voice.name+' · '+voice.lang;option.selected=voice.voiceURI===chosen;select.append(option)}select.onchange=()=>{localStorage.setItem('extractorMCVoice',select.value);window.ExtractorRicky?.refresh()};$('testMC').onclick=()=>{stop();speak(select.value==='__ricky__'?'Ricky is live. Hey Ricky, wake up. Let us throw some bloody darts.':'Welcome to the Nexus. I am the Extractor. Three darts. One arena. Let us make them count.',null,'mc')};
+ const select=$('mcVoice');if(!select)return;while(select.options.length>2)select.remove(2);let chosen='';try{chosen=localStorage.getItem('extractorMCVoice')||''}catch(_){}for(const voice of (window.speechSynthesis?.getVoices?.()||[]).filter(v=>/^en/i.test(v.lang))){const option=document.createElement('option');option.value=voice.voiceURI;option.textContent=voice.name+' · '+voice.lang;option.selected=voice.voiceURI===chosen;select.append(option)}select.value=chosen;select.onchange=()=>{stop();localStorage.setItem('extractorMCVoice',select.value);window.ExtractorRicky?.refresh()};if(!select.parentElement.querySelector('.ricky-recordings'))window.ExtractorRecordedRicky?.mount(select.parentElement);$('testMC').onclick=()=>{stop();if(select.value==='__ricky__'){window.ExtractorRecordedRicky?.preview();return}speak(select.value==='__ricky__'?'Ricky is live. Hey Ricky, wake up. Let us throw some bloody darts.':'Welcome to the Nexus. I am the Extractor. Three darts. One arena. Let us make them count.',null,'mc')};
 }
 function render(){
  document.body.classList.remove('menu-active');
@@ -94,7 +99,7 @@ function render(){
  <div class="row" style="margin-top:7px"><button data-bull="1" ${state.phase!=='throw'?'disabled':''}>GREEN 25</button><button data-bull="2" ${state.phase!=='throw'?'disabled':''}>RED 50</button><button id="miss" ${state.phase!=='throw'?'disabled':''}>MISS</button></div>
  <div class="row" style="margin-top:8px"><button id="undo">↶ UNDO</button><button id="changeClaim" class="${state.phase==='done'&&state.reviewBase?'':'hidden'}">CHANGE DECISION</button><button id="next" ${state.phase!=='done'?'disabled':''}>NEXT PLAYER →</button></div>
  <div class="tiny" style="margin-top:8px">Manual input • OMNI integration pending • Scores saved on this device</div></section></div>
- <section class="panel voice" id="voicepanel"><div class="row"><span style="font-size:25px;flex:0">🤖</span><div style="flex:5"><b class="cyan" style="font-size:12px">EXTRACTOR VOICE CONTROL · v0.10.8</b><div id="message" class="status">${state.phase==='throw'?'Say your darts, or enter them by touch. Then choose what to take.':state.phase==='choose'?"Selection time.":state.phase==='win'?'GAME OVER!':'Turn scored. Next player.'}</div></div><strong id="seconds" style="text-align:right;flex:0">—</strong></div>
+ <section class="panel voice" id="voicepanel"><div class="row"><span style="font-size:25px;flex:0">🤖</span><div style="flex:5"><b class="cyan" style="font-size:12px">EXTRACTOR VOICE CONTROL · v0.10.9</b><div id="message" class="status">${state.phase==='throw'?'Say your darts, or enter them by touch. Then choose what to take.':state.phase==='choose'?"Selection time.":state.phase==='win'?'GAME OVER!':'Turn scored. Next player.'}</div></div><strong id="seconds" style="text-align:right;flex:0">—</strong></div>
  <div id="choices" class="options ${state.phase==='choose'?'':'hidden'}"></div>
  <div class="row" style="margin-top:7px"><button id="listen" class="primary hidden">🎙️ LAUNCH WHEN READY</button><button id="pause" class="hidden">⏸ WAIT A SEC</button><button id="confirm" class="${state.phase==='choose'?'primary':'hidden'}" ${state.phase==='choose'?'':'disabled'}>✓ CONFIRM CLAIM</button></div>
  <div id="info" class="tiny muted" style="margin-top:7px">Microphone and speech depend on Safari/browser support. Touch controls always work.</div></section></div>`;
@@ -280,23 +285,25 @@ function intro(){
  stop();window.ExtractorStage?.cancel();const sound=window.extractorMusic,video=sound.media;
  sound.pause();sound.seek(0);document.body.classList.remove('menu-active');document.body.classList.add('intro-active');
  const level=sound.getLevel();
- $('app').innerHTML=`<section class="storyboard-wrap intro-wrap"><div class="storyboard-controls"><p id="introStatus" role="status">BETA v0.10.8 TEST · Tap Play for the Nexus experience.</p><div class="row"><button id="playIntro" class="primary">▶ PLAY INTRO WITH SOUND</button><button id="skipIntro">SELECT GAME →</button></div><label class="intro-volume" for="introVolume">SOUND LEVEL <output id="introVolumeValue">${Math.round(level*100)}%</output><input id="introVolume" type="range" min="0" max="100" value="${Math.round(level*100)}"></label></div></section>`;
+ $('app').innerHTML=`<section class="storyboard-wrap intro-wrap"><div class="storyboard-controls"><p id="introStatus" role="status">BETA v0.10.9 TEST · The Nexus experience · turn sound on when ready.</p><div class="row"><button id="playIntro" class="primary">▶ PLAY INTRO WITH SOUND</button><button id="skipIntro">SKIP INTRO →</button></div><label class="intro-volume" for="introVolume">SOUND LEVEL <output id="introVolumeValue">${Math.round(level*100)}%</output><input id="introVolume" type="range" min="0" max="100" value="${Math.round(level*100)}"></label></div></section>`;
  let leaving=false;
  const leave=()=>{if(leaving)return;leaving=true;video.onplay=null;video.onpause=null;video.ontimeupdate=null;video.onended=null;video.onerror=null;if(document.fullscreenElement)document.exitFullscreen?.().catch(()=>{});menu()};
  $('skipIntro').onclick=()=>{sound.seek(sound.introEndSec);sound.start();leave()};
- $('playIntro').onclick=()=>{if(!video.paused){sound.pause();return}try{document.documentElement.requestFullscreen?.().catch(()=>{})}catch(e){}sound.start()};
- video.onplay=()=>{if(leaving)return;$('playIntro').textContent='Ⅱ PAUSE';$('introStatus').textContent='THE EXTRACTOR NEXUS';document.querySelector('.storyboard-controls').classList.add('playing')};
+ $('playIntro').onclick=()=>{if(!video.paused&&!video.muted){sound.pause();return}try{document.documentElement.requestFullscreen?.().catch(()=>{})}catch(e){}sound.start()};
+ video.onplay=()=>{if(leaving)return;$('playIntro').textContent=video.muted?'🔊 TURN SOUND ON':'Ⅱ PAUSE';$('introStatus').textContent='THE EXTRACTOR NEXUS';document.querySelector('.storyboard-controls').classList.add('playing')};
  video.onpause=()=>{if(!leaving){$('playIntro').textContent='▶ RESUME WITH SOUND';document.querySelector('.storyboard-controls').classList.remove('playing')}};
  // Workprint 15 runs to completion, then the game menu takes over immediately.
  video.ontimeupdate=()=>{if(video.currentTime>=sound.introEndSec)leave()};
  video.onended=()=>{sound.seek(sound.introEndSec);sound.start();leave()};
  video.onerror=()=>{if(!leaving)$('introStatus').textContent='Intro could not load. Select Game is still available.'};
  $('introVolume').oninput=e=>{const n=Number(e.target.value)/100;sound.setLevel(n);$('introVolumeValue').textContent=Math.round(n*100)+'%'};
+ // Muted autoplay is allowed on a fresh browser; sound is enabled by a player tap.
+ sound.start({muted:true});
 }
 
 
 window.speechSynthesis?.addEventListener?.('voiceschanged',()=>{if($('mcVoice'))bindMCVoices()});
-// Startup: Always enter through the Nexus home on a fresh page load.
-// Saved scoring state is preserved in localStorage, but it no longer bypasses the home/settings screen.
+// Startup: cinema first on every fresh load, then the Nexus menu and registration.
+// Saved scoring state and profiles remain intact.
 try{state.screen='menu';save()}catch(_){}
-menu();
+intro();

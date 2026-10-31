@@ -1,7 +1,7 @@
 /* One native media stream: mixed intro, then uninterrupted music through bull-off. */
 (() => {
  const media=document.createElement('video');media.id='experienceMedia';
- media.src='nexus-workprint-15.mp4?v=0108-public-flat1';media.preload='metadata';media.playsInline=true;
+ media.src='nexus-workprint-15.mp4?v=0109-recorded1';media.preload='metadata';media.playsInline=true;
  media.setAttribute('playsinline','');media.setAttribute('aria-label','Extractor Nexus cinematic audio and intro');
  document.body.append(media);
  const introEndSec=97.63333333333334;
@@ -14,10 +14,10 @@
  function pause(){clearInterval(fadeTimer);fadeTimer=null;media.pause();toggle.textContent='▶ MUSIC';status.textContent='Music paused.'}
  function seek(seconds){if(Number.isFinite(seconds)){pendingSeek=Math.max(0,seconds);try{media.currentTime=pendingSeek;pendingSeek=null}catch(_){}}}
  media.addEventListener('loadedmetadata',()=>{if(pendingSeek!==null)seek(pendingSeek)});
- async function start(){
+ async function start(options={}){
   clearInterval(fadeTimer);fadeTimer=null;fade=1;
   if(!document.body.classList.contains('intro-active')&&media.currentTime<introEndSec)seek(introEndSec);
-  apply();
+  apply();if(options.muted)media.muted=true;
   try{
    // Invoke play directly in the user gesture; no second audio element or AudioContext.
    await media.play();toggle.textContent='Ⅱ MUSIC';status.textContent='Nexus soundtrack playing.';

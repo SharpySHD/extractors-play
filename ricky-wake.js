@@ -55,7 +55,7 @@
   }
   function start(){enabled=true;clearTimeout(restartTimer);if(!rickySelected()||!Speech()||activeMode()==='menu')return;stopRecognition();try{const mic=new (Speech())();recognition=mic;mic.lang=root.ExtractorCommands?.language?.()||'en-AU';mic.continuous=true;mic.interimResults=false;mic.maxAlternatives=1;mic.onresult=e=>{for(let i=e.resultIndex||0;i<e.results.length;i++){const r=e.results[i];if(r&&r.isFinal!==false)parseResult(r[0]?.transcript||'')}};mic.onerror=e=>{if(e.error==='not-allowed'||e.error==='service-not-allowed'){enabled=false;status('Always-on Ricky needs microphone permission. Touch controls still work.')}};mic.onend=()=>{recognition=null;if(enabled&&rickySelected()&&activeMode()!=='menu')restartTimer=setTimeout(start,350)};mic.start();status('Ricky hot mic ON · say “Hey Ricky”.');scheduleIdle()}catch(_){recognition=null}}
   function stopRecognition(){const old=recognition;recognition=null;if(old)try{old.abort()}catch(_){} }
-  function stop(){enabled=false;armed=false;clearTimeout(restartTimer);clearTimeout(idleTimer);restartTimer=idleTimer=null;stopRecognition()}
+  function stop(){window.ExtractorRecordedRicky?.stop();enabled=false;armed=false;clearTimeout(restartTimer);clearTimeout(idleTimer);restartTimer=idleTimer=null;stopRecognition()}
   function refresh(){if(rickySelected()&&activeMode()!=='menu')start();else stop()}
   root.ExtractorRicky={start,stop,refresh,feedForTest:parseResult,isEnabled:()=>enabled,number};
 })();

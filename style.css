@@ -111,3 +111,14 @@ body.menu-active{background:linear-gradient(#01060d25,#02081288),url('nexus-aren
 .settings-dialog{width:min(92vw,520px);max-height:88dvh;border:1px solid #5f93b2;border-radius:16px;padding:18px;background:linear-gradient(150deg,#0c2235,#020913 75%);color:#eaf8ff}.settings-dialog::backdrop{background:#000b;backdrop-filter:blur(6px)}.settings-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;letter-spacing:2px}.settings-head button{width:44px;height:44px;padding:0}.settings-stack{display:grid;gap:10px}.settings-stack>button{width:100%;min-height:46px}.settings-volume{font-size:10px;letter-spacing:1.5px}.settings-volume output{float:right}.settings-volume input{display:block;width:100%;margin-top:8px}.settings-dialog .mc-voice-control{margin:0}
 @media(max-width:650px){.nexus-hero{min-height:54dvh}.big-fella-decks{width:76vw;height:42%;top:23%}.extractor-guard{width:42vw;height:62%;right:-8%}.nexus-screen{width:34vw;left:2%;bottom:8%}.quick-play{margin-top:-42px}.nexus-title .brand{font-size:34px}.nexus-title .subtitle{font-size:9px}}
 @media(max-width:380px){.nexus-screen{display:none}.big-fella-decks{width:88vw}.extractor-guard{opacity:.78}.quick-play{margin-top:-34px}}
+
+/* v0.10.9: original four illustrated games on the simple Nexus home. */
+.quick-play .menuButtons{margin-top:10px;gap:10px}
+.quick-play .menuButtons button.game-tile{min-height:146px;padding:15px 12px}
+.quick-play .tile-copy{font-size:clamp(20px,4vw,29px)}
+.quick-play .tile-copy small{font-size:9px}
+.quick-play .mickey-emblem{width:100px;height:100px;right:10px;top:10px;transform:scale(.85);transform-origin:top right}
+.intro-active .storyboard-controls.playing{opacity:.78}
+.ricky-recordings{display:grid;gap:6px;grid-column:1/-1}
+.ricky-recordings button{font-size:12px;text-align:left}
+@media(max-width:450px){.quick-play .menuButtons button.game-tile{min-height:132px}.quick-play .tile-copy{font-size:20px}.quick-play .mickey-emblem{transform:scale(.65)}.quick-play .tile-copy small{font-size:8px}}

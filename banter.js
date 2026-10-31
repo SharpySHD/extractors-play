@@ -123,7 +123,7 @@
  ]};
  let enabled=true,lastAt=-Infinity,cursors={},previous={};
  try{enabled=localStorage.getItem('extractorBanter')!=='off';cursors=JSON.parse(localStorage.getItem('extractorBanterCursors')||'{}')}catch(_){}
- function pick(topic){if(!enabled||Date.now()-lastAt<12000||!lines[topic])return '';const pool=lines[topic];let index=Number.isInteger(cursors[topic])?cursors[topic]%pool.length:Math.floor(Math.random()*pool.length);if(previous[topic]===index)index=(index+1)%pool.length;previous[topic]=index;cursors[topic]=(index+1)%pool.length;lastAt=Date.now();try{localStorage.setItem('extractorBanterCursors',JSON.stringify(cursors))}catch(_){}return pool[index]}
+ function pick(topic){if(!enabled||Date.now()-lastAt<12000||!lines[topic])return '';window.ExtractorRecordedRicky?.queue(topic);const pool=lines[topic];let index=Number.isInteger(cursors[topic])?cursors[topic]%pool.length:Math.floor(Math.random()*pool.length);if(previous[topic]===index)index=(index+1)%pool.length;previous[topic]=index;cursors[topic]=(index+1)%pool.length;lastAt=Date.now();try{localStorage.setItem('extractorBanterCursors',JSON.stringify(cursors))}catch(_){}return pool[index]}
  function toggle(){enabled=!enabled;try{localStorage.setItem('extractorBanter',enabled?'on':'off')}catch(_){}return enabled}
  window.ExtractorBanter={pick,toggle,isEnabled:()=>enabled,lines};
 })();
