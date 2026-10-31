@@ -1,0 +1,22 @@
+Extractor's Play v0.13.3 rebuild audit
+
+Source of truth: user-supplied extractors-play-main.zip (v0.12.8 live repo).
+
+Verified in code:
+- Actual startup calls bootPermissions() and then intro().
+- First menu boot explicitly calls ExtractorProfiles.startBootVoiceWizard().
+- Boot wizard owns a dedicated setup speech recognizer; no "Hey Ricky" wake phrase is required during setup.
+- Boot wizard asks "Are you logged in?".
+- Registration voice drill asks player to count from 12 to 20, then say double, triple, bed, bull.
+- Voice enrolment record is stored inside the player profile via public-test-profiles.js.
+- Player 2 login/register flow is included.
+- MIC / CAMERA ACCESS dropdown remains in Settings.
+- Normal Ricky listener can listen in menu or gameplay.
+- Long Mickey fallback prompt containing "singles, doubles, triples, beds or bull" was removed; invalid dart input now gets one short retry only.
+- Service worker cache key bumped to extractor-play-public-v0133-stable-startup.
+- Visible runtime labels updated to v0.13.3.
+- Every top-level JavaScript file passes node --check.
+
+Browser limitations:
+- Chrome controls the actual permission UI.
+- Speaker identity matching remains experimental; saved profile name is the reliable fallback.

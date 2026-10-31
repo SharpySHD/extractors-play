@@ -11,7 +11,7 @@
  const norm=s=>String(s||'').toLowerCase().replace(/[^a-z0-9 ]+/g,' ').replace(/\s+/g,' ').trim();
  const wakeNames=['ricky','rickey','rickie','rikki','rikky'];
  function wakeCommand(text){const t=norm(text);if(!t)return null;const words=t.split(' ');for(let i=0;i<Math.min(words.length,4);i++){const w=words[i];if(!['hey','hi','aye','oi'].includes(w))continue;const n=words[i+1]||'';if(wakeNames.includes(n)||n==='tricky'||n==='ricky'){return words.slice(i+2).join(' ')}}if(/^ricky\b/.test(t))return t.replace(/^ricky\s*/,'');return null}
- function ownEcho(text){const t=norm(text);if(!t||!lastOwnSpeech)return false;if(Date.now()-lastOwnSpeechEnded>1800)return false;if(t===lastOwnSpeech)return true;if(lastOwnSpeech.length>18&&(lastOwnSpeech.includes(t)||t.includes(lastOwnSpeech)))return true;return false}
+ function ownEcho(text){const t=norm(text);if(!t||!lastOwnSpeech)return false;if(Date.now()-lastOwnSpeechEnded>4500)return false;if(t===lastOwnSpeech)return true;if(lastOwnSpeech.length>12&&(lastOwnSpeech.includes(t)||t.includes(lastOwnSpeech)))return true;const a=new Set(lastOwnSpeech.split(' ').filter(x=>x.length>2)),b=t.split(' ').filter(x=>x.length>2);if(a.size>=3&&b.length>=2){const hits=b.filter(x=>a.has(x)).length;if(hits>=Math.min(3,b.length))return true}return false}
  function cutRickyOff(){root.ExtractorInterruptSpeech?.();root.ExtractorRecordedRicky?.stop();try{root.speechSynthesis?.cancel()}catch(_){}root.ExtractorSpeechBusy=false}
  const wordNumber={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19,twenty:20};
  function boardNumber(token){if(/^\d+$/.test(token)){const n=Number(token);return n>=1&&n<=20?n:null}return Object.hasOwn(wordNumber,token)?wordNumber[token]:null}
@@ -326,7 +326,7 @@
   const player=currentPlayer();if(player===null){if(settingsCommand(raw)||root.ExtractorProfiles?.handleRicky?.(raw)){disarm();if(!root.ExtractorProfiles?.isVoiceFlowActive?.())clearWakeLock();paint();if(!root.ExtractorProfiles?.isVoiceFlowActive?.())releaseWakeMusicWhenQuiet();return}arm();return}
   if(player!==armedPlayer){disarm();paint();return}
   const routed=naturalDarts(raw);disarm();if(route(routed,player)){clearWakeLock();paint();scheduleIdle();releaseWakeMusicWhenQuiet();return}
-  armed=true;armedPlayer=player;lastWake=Date.now();say("I didn't get that. Give me the score again, "+names()[player]+'.');paint();
+  armed=true;armedPlayer=player;lastWake=Date.now();say("Again, "+names()[player]+'.');paint();
  }
  function scheduleIdle(){
   clearTimeout(idleTimer);idleTimer=null;if(!enabled||!inGame())return;

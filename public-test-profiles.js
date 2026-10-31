@@ -15,7 +15,10 @@
    if(i<0&&rows.length>=200)return reply({error:'This device has 200 players. Edit an existing player.'},400);
    let image=i>=0?rows[i].photoUrl:null;if(data.removePhoto)image=null;
    if(data.photo){if(typeof data.photo!=='string'||data.photo.length>220000||!/^data:image\/(jpeg|png|webp);base64,[a-zA-Z0-9+/=]+$/.test(data.photo))return reply({error:'Choose a smaller JPEG, PNG or WebP image.'},400);image=data.photo}
-   const p={id:i>=0?rows[i].id:crypto.randomUUID(),name,username,photoUrl:image,updatedAt:new Date().toISOString()};if(i>=0)rows[i]=p;else rows.push(p);
+   const old=i>=0?rows[i]:{};
+   let voiceEnrollment=data.voiceEnrollment===null?null:(data.voiceEnrollment||old.voiceEnrollment||null);
+   if(voiceEnrollment&&typeof voiceEnrollment==='object'){const sample=typeof voiceEnrollment.sample==='string'&&voiceEnrollment.sample.length<=200000?voiceEnrollment.sample:null;voiceEnrollment={version:1,complete:!!voiceEnrollment.complete,enrolledAt:String(voiceEnrollment.enrolledAt||new Date().toISOString()).slice(0,40),phrase:String(voiceEnrollment.phrase||'').slice(0,100),training:{count12to20:String(voiceEnrollment.training?.count12to20||'').slice(0,200),terms:String(voiceEnrollment.training?.terms||'').slice(0,120)},sample,mime:String(voiceEnrollment.mime||'').slice(0,80),sampleStored:!!sample}}
+   const p={id:i>=0?rows[i].id:crypto.randomUUID(),name,username,photoUrl:image,voiceEnrollment,updatedAt:new Date().toISOString()};if(i>=0)rows[i]=p;else rows.push(p);
    localStorage.setItem(KEY,JSON.stringify(rows));return reply({profile:p});
   }catch(e){return reply({error:e?.name==='QuotaExceededError'?'Device storage is full. Save without a photo or clear old test data.':'Could not read or save this device profile.'},503)}
  }
