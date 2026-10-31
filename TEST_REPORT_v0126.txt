@@ -1,0 +1,10 @@
+Extractor's Play v0.12.6 full-duplex wake update
+
+Verified in source:
+- Bare Hey Ricky arms silently first and delays acknowledgement by 320 ms.
+- If the rest of the sentence arrives, pending acknowledgement is cancelled.
+- If Ricky has begun speaking while armed, continuing player speech cuts him off and is still parsed.
+- One-wake lock/debounce from v0.12.5 remains in place.
+- Natural dart shorthand remains unchanged; doubles/triples still require a following board number.
+- High-listening interim recognition, multiple alternatives, echo suppression and fast restart remain enabled.
+- Service worker cache key bumped for v0.12.6.

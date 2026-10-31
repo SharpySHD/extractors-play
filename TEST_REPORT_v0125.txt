@@ -1,0 +1,6 @@
+Extractor's Play v0.12.5 wake acknowledgement fix
+- One wake phrase = one acknowledgement.
+- Duplicate/interim wake results are ignored while Ricky is armed/listening.
+- Wake lock clears after a handled command/score or after 9 seconds of no follow-up.
+- Existing high-listening interim detection, 3 alternatives, echo suppression and barge-in remain.
+- All JavaScript files pass node --check.

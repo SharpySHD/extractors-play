@@ -1,0 +1,12 @@
+Extractor's Play v0.12.7 roast-loop merge
+
+Static checks:
+- ricky-humour.js bundled before ricky-wake.js
+- continuous roast targets: Jordy, Dwayno/Duano, Agent K
+- hard stop phrases work without wake phrase and are evaluated before speech-busy rejection
+- tell-me-more retains last roast target and escalates
+- roast loop keeps music paused; stop/other wake command releases normal policy
+- v0.12.6 full-duplex wake/listening/scoring code retained
+- doubles/triples still require a following board number in naturalDarts()
+
+Runtime browser permissions and Web Speech behaviour must still be verified on target Android/Chrome hardware.

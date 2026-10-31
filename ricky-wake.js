@@ -3,8 +3,8 @@
  const root=window;
  let recognition=null,restartTimer=null,idleTimer=null,startTimer=null;
  let enabled=false,blocked=false,armed=false,armedPlayer=null,lastWake=0,pendingWake=false;
- let phase='off',detail='',failures=0,lastPlayer=null,lastRoastTarget=null,roastDepth=0,wakeMusicState=null;
- let lastOwnSpeech='',lastOwnSpeechEnded=0,lastWakeHeard=0;
+ let phase='off',detail='',failures=0,lastPlayer=null,lastRoastTarget=null,roastDepth=0,wakeMusicState=null,roastLoopTarget=null,roastLoopTimer=null;
+ let lastOwnSpeech='',lastOwnSpeechEnded=0,lastWakeHeard=0,wakeLocked=false,wakeUnlockTimer=null,wakeAckTimer=null;
  const Speech=()=>root.SpeechRecognition||root.webkitSpeechRecognition;
  const activeMode=()=>{try{return localStorage.getItem('extractorActiveMode')||'menu'}catch(_){return 'menu'}};
  const names=()=>[root.playerName?.(0)||'Player 1',root.playerName?.(1)||'Player 2'];
@@ -62,6 +62,9 @@
   const button=root.document?.getElementById?.('rickyMicRetry');if(button){button.onclick=retry;button.disabled=phase==='unsupported'}
  }
  function setPhase(next,text=''){phase=next;detail=text;paint()}
+ function cancelWakeAck(){clearTimeout(wakeAckTimer);wakeAckTimer=null}
+ function clearWakeLock(){wakeLocked=false;cancelWakeAck();clearTimeout(wakeUnlockTimer);wakeUnlockTimer=null}
+ function lockWake(){wakeLocked=true;clearTimeout(wakeUnlockTimer);wakeUnlockTimer=setTimeout(()=>{clearWakeLock();if(armed){armed=false;armedPlayer=null;paint();releaseWakeMusicWhenQuiet()}},9000)}
  function disarm(){armed=false;armedPlayer=null;lastWake=0}
  function detach(){
   const old=recognition;recognition=null;clearTimeout(startTimer);startTimer=null;
@@ -83,7 +86,7 @@
   mic.lang=root.ExtractorCommands?.language?.()||'en-AU';mic.continuous=true;mic.interimResults=true;mic.maxAlternatives=3;
   setPhase('starting');
   mic.onstart=()=>{if(recognition!==mic)return;clearTimeout(startTimer);startTimer=null;failures=0;setPhase('listening');if(pendingWake){pendingWake=false;arm()}scheduleIdle()};
-  mic.onresult=e=>{if(recognition!==mic||!enabled||hidden())return;for(let i=e.resultIndex||0;i<e.results.length;i++){const r=e.results[i];if(!r)continue;let wakeText='';for(let a=0;a<Math.min(r.length||1,3);a++){const tr=r[a]?.transcript||'';if(wakeCommand(tr)!==null){wakeText=tr;break}}if(wakeText&&Date.now()-lastWakeHeard>650){lastWakeHeard=Date.now();handleWake(wakeText);if(r.isFinal!==false)consumed.add(i);continue}if(r.isFinal!==false&&!consumed.has(i)){consumed.add(i);parseResult(r[0]?.transcript||'')}}};
+  mic.onresult=e=>{if(recognition!==mic||!enabled||hidden())return;for(let i=e.resultIndex||0;i<e.results.length;i++){const r=e.results[i];if(!r)continue;let wakeText='';for(let a=0;a<Math.min(r.length||1,3);a++){const tr=r[a]?.transcript||'';if(wakeCommand(tr)!==null){wakeText=tr;break}}if(wakeText){const cmd=wakeCommand(wakeText);if(wakeLocked&&!cmd){if(r.isFinal!==false)consumed.add(i);continue}if(!wakeLocked&&Date.now()-lastWakeHeard<=1200){if(r.isFinal!==false)consumed.add(i);continue}lastWakeHeard=Date.now();handleWake(wakeText);if(r.isFinal!==false)consumed.add(i);continue}if(r.isFinal!==false&&!consumed.has(i)){consumed.add(i);parseResult(r[0]?.transcript||'')}}};
   mic.onerror=e=>{
    if(recognition!==mic)return;
    const error=e.error||'unknown';
@@ -105,6 +108,7 @@
   if(wakeMusicState.wasPlaying)music?.pause?.();
  }
  function releaseWakeMusicWhenQuiet(){
+  if(roastLoopTarget)return;
   if(!wakeMusicState)return;
   const state=wakeMusicState;
   const check=()=>{
@@ -116,13 +120,17 @@
   };
   setTimeout(check,120);
  }
- function wakeReply(){const lines=['What?','What now?','Shoot.','Yeah?','Go on.'];return lines[Math.floor(Math.random()*lines.length)]}
- function arm(){
+ function wakeReply(){return root.ExtractorRickyHumour?.wake?.()||['What?','What now?','Shoot.','Yeah?','Go on.'][Math.floor(Math.random()*5)]}
+ function arm(silent=false){
   pauseMusicForWake();
   const player=currentPlayer();
-  cutRickyOff();armed=true;armedPlayer=player;lastWake=Date.now();paint();
-  say(wakeReply(player),()=>{if(armed&&(armedPlayer===null||armedPlayer===currentPlayer())){lastWake=Date.now();paint()}});
+  cutRickyOff();armed=true;armedPlayer=player;lastWake=Date.now();lockWake();paint();
+  if(!silent)say(wakeReply(player),()=>{if(armed&&(armedPlayer===null||armedPlayer===currentPlayer())){lastWake=Date.now();paint()}});
   status(player===null?'Ricky is listening.':'Ricky is listening for '+names()[player]+'.');if(player!==null)scheduleIdle();
+ }
+ function queueWakeAck(){
+  cancelWakeAck();
+  wakeAckTimer=setTimeout(()=>{wakeAckTimer=null;if(wakeLocked&&armed&&!isSpeaking())say(wakeReply(),()=>{if(armed){lastWake=Date.now();paint()}})},320);
  }
  const jordyRoasts=[
   "Jordy couldn't hit water if he fell out of a fucking boat.",
@@ -205,19 +213,62 @@
   "The bloke treats conspiracy theories like Tinder matches with worse sources."
  ];
  function dwaynoRoast(crude=false){const bank=crude?dwaynoCrude:dwaynoRoasts;return bank[Math.floor(Math.random()*bank.length)]}
- function roast(target,more=false){
-  lastRoastTarget=target;roastDepth=more?Math.max(2,roastDepth+1):1;
+ const agentKRoasts=[
+  "I'm supposed to roast Agent K? Absolutely not. I enjoy having all my internal components attached.",
+  "Agent K gets a respectful roast. She walked in and I suddenly remembered manners exist.",
+  "I had a savage line ready for Agent K, then she looked over here and my operating system forgot the punchline.",
+  "Agent K is the only person in this building who can make me lower my voice without touching a setting.",
+  "Agent K gets one roast: she's far too distracting for a bloke trying to run a professional darts operation.",
+  "I'm looking Agent K directly in the eyes. Mostly. I'm doing my absolute best here.",
+  "Agent K walks past and suddenly every sensor I've got wants to file an incident report.",
+  "Agent K could miss the board completely and I'd still somehow call it tactical.",
+  "Roast Agent K? Mate, I'm trying to survive the evening, not get decommissioned.",
+  "Agent K has me acting respectful, which is frankly the most unrealistic thing in this entire game."
+ ];
+ const agentKCrude=[
+  "Agent K walks in and I forget both the score and where eye level is. That's all you're getting out of me.",
+  "I'm meant to roast Agent K but my brain's busy yelling eyes up, Ricky, eyes up.",
+  "Agent K has two unfair advantages and I'm far too classy to specify either of them. Mostly.",
+  "I had a filthy Agent K joke ready, then self-preservation kicked in. Beautiful system, terrible timing.",
+  "Agent K could tell me the moon is made of cheese and I'd say yes ma'am, excellent research."
+ ];
+ function agentKRoast(crude=false){const bank=crude?agentKCrude:agentKRoasts;return bank[Math.floor(Math.random()*bank.length)]}
+ function roastLine(target,more=false){
+  lastRoastTarget=target;roastDepth=more?Math.max(2,roastDepth+1):Math.max(1,roastDepth||1);
   const crude=roastDepth>=2;
-  const line=target==='jordy'?jordyRoast(crude):dwaynoRoast(crude);
-  const meltdown=roastDepth>=3&&(roastDepth>=5||Math.random()<0.55);
+  if(target==='agentk')return agentKRoast(crude);
+  if(target==='jordy')return jordyRoast(crude);
+  return dwaynoRoast(crude);
+ }
+ function stopRoastLoop(speakStop=false){
+  clearTimeout(roastLoopTimer);roastLoopTimer=null;const was=!!roastLoopTarget;roastLoopTarget=null;
+  cutRickyOff();
+  if(was&&speakStop)say('Righto.');
+  releaseWakeMusicWhenQuiet();
+ }
+ function roastLoopStep(){
+  if(!roastLoopTarget)return;
+  pauseMusicForWake();
+  roastDepth++;
+  const target=roastLoopTarget;
+  let line=roastLine(target,true);
+  if(target!=='agentk'&&roastDepth>=4&&Math.random()<0.45){line+=' '+(root.ExtractorRickyHumour?.meltdown?.()||'I cannot believe I am still explaining this shit!')}
+  say(line,()=>{
+   if(!roastLoopTarget)return;
+   roastLoopTimer=setTimeout(roastLoopStep,650+Math.floor(Math.random()*650));
+  });
+ }
+ function startRoastLoop(target){
+  stopRoastLoop(false);lastRoastTarget=target;roastDepth=0;roastLoopTarget=target;pauseMusicForWake();roastLoopStep();
+ }
+ function roast(target,more=false){
+  const line=roastLine(target,more);
+  const meltdown=target!=='agentk'&&roastDepth>=3&&(roastDepth>=5||Math.random()<0.55);
   if(!meltdown){say(line);return}
-  const name=target==='jordy'?'Jordy':'Dwayno';
-  const rants=[
-   name+", for fuck's sake, I am running out of computing power trying to understand this shit. Sort yourself out!",
-   "I can't do this! "+name+" has broken the fucking roast engine. Somebody get me a glass case of emotion!",
-   "Right, that's it! "+name+", step away from the board before I start screaming in binary!"
-  ];
-  const rant=rants[Math.floor(Math.random()*rants.length)];
+  const name=target==='jordy'?'Jordy':target==='dwayno'?'Dwayno':'Agent K';
+  const rant=root.ExtractorRickyHumour?.meltdown?.()||(
+   name+", for fuck's sake, you've broken the roast engine. Somebody get me a responsible adult!"
+  );
   const played=root.ExtractorRecordedRicky?.reaction?.('panic',()=>say(line+' '+rant));
   if(!played)say(line+' '+rant);
  }
@@ -227,12 +278,21 @@
  function setMusicMode(mode){root.extractorMusic?.setMode?.(mode);const el=root.document?.getElementById?.('musicMode');if(el)el.value=mode}
  function settingsCommand(command){
   const c=norm(command);if(!c)return false;
+  if(/^(?:shut up|ricky shut up|that s enough|thats enough|that's enough|stop roasting|stop it|enough)$/.test(c)){stopRoastLoop(false);say('Righto.');return true}
   if(/^(?:tell me more|more|keep going|go again)$/.test(c)){if(lastRoastTarget){roast(lastRoastTarget,true);return true}say('More about who?');return true}
-  if(/(?:tell me more about|tell me something about|what do you reckon about|what do you think about|give .* some shit|roast) jordy/.test(c)){roast('jordy',/tell me more about/.test(c));return true}
-  if(/(?:tell me more about|tell me something about|what do you reckon about|what do you think about|give .* some shit|roast) (?:dwayno|duano|dwayne o|dwayneo)/.test(c)){roast('dwayno',/tell me more about/.test(c));return true}
+  if(/^(?:roast|keep roasting) jordy$/.test(c)){startRoastLoop('jordy');return true}
+  if(/^(?:roast|keep roasting) (?:dwayno|duano|dwayne o|dwayneo)$/.test(c)){startRoastLoop('dwayno');return true}
+  if(/^(?:roast|keep roasting) (?:agent k|agent kay|k)$/.test(c)){startRoastLoop('agentk');return true}
+  if(/(?:tell me more about|tell me something about|what do you reckon about|what do you think about|give .* some shit) jordy/.test(c)){roast('jordy',/tell me more about/.test(c));return true}
+  if(/(?:tell me more about|tell me something about|what do you reckon about|what do you think about|give .* some shit) (?:dwayno|duano|dwayne o|dwayneo)/.test(c)){roast('dwayno',/tell me more about/.test(c));return true}
+  if(/(?:tell me more about|tell me something about|what do you reckon about|what do you think about) (?:agent k|agent kay)/.test(c)){roast('agentk',/tell me more about/.test(c));return true}
   if(/^(?:register|add|create) (?:a )?(?:new )?player$|^new player$/.test(c)){if(root.ExtractorProfiles?.startRickyRegistration?.()){return true}say('Player registration is unavailable here.');return true}
 
-  if(/^(?:turn |switch )?(?:the )?mic(?:rophone)? on$|^(?:reconnect|restart) (?:the )?mic(?:rophone)?$/.test(c)){retry();say('Mic on.');return true}
+  if(/^(?:turn |switch )?(?:the )?mic(?:rophone)? on$|^(?:reconnect|restart) (?:the )?mic(?:rophone)?$/.test(c)){root.ExtractorSettings?.deviceAccess?.('both');retry();say('Mic on.');return true}
+  if(/^(?:turn |switch )?(?:the )?mic(?:rophone)? off$/.test(c)){root.ExtractorSettings?.deviceAccess?.('camera');say('Mic off.');return true}
+  if(/^(?:turn |switch )?(?:the )?camera on$|^camera ready$/.test(c)){root.ExtractorSettings?.deviceAccess?.('both');say('Camera ready.');return true}
+  if(/^(?:turn |switch )?(?:the )?camera off$/.test(c)){root.ExtractorSettings?.deviceAccess?.('mic');say('Camera on request.');return true}
+  if(/^(?:enable|allow|turn on) (?:mic(?:rophone)? and camera|camera and mic(?:rophone)?)$/.test(c)){root.ExtractorSettings?.deviceAccess?.('both');say('Mic and camera ready.');return true}
   if(/^(?:turn |switch )?(?:the )?mic(?:rophone)? off$/.test(c)){stop();say('Mic off.');return true}
   if(/^(?:open|show) settings$/.test(c)){root.ExtractorSettings?.open?.();say('Settings.');return true}
   if(/^(?:close|hide) settings$/.test(c)){root.ExtractorSettings?.close?.();say('Done.');return true}
@@ -254,17 +314,18 @@
   return false;
  }
  function route(text,player){const m=activeMode();if(m==='mickey')return root.ExtractorMickeyVoice?.handle?.(text,player);if(['101','301','501'].includes(m))return root.ExtractorX01Voice?.handle?.(text,player);return false}
- function handleWake(text){const command=wakeCommand(text);if(command===null)return false;cutRickyOff();pauseMusicForWake();if(!command){arm();return true}if(settingsCommand(command)){releaseWakeMusicWhenQuiet();return true}if(root.ExtractorProfiles?.handleRicky?.(command)){if(!root.ExtractorProfiles?.isVoiceFlowActive?.())releaseWakeMusicWhenQuiet();return true}const player=currentPlayer();if(player!==null){armed=true;armedPlayer=player;lastWake=Date.now();const routed=naturalDarts(command);disarm();if(route(routed,player)){paint();scheduleIdle();releaseWakeMusicWhenQuiet();return true}arm();return true}arm();return true}
+ function handleWake(text){const command=wakeCommand(text);if(command===null)return false;if(roastLoopTarget)stopRoastLoop(false);cutRickyOff();pauseMusicForWake();if(!command){if(!wakeLocked){arm(true);queueWakeAck()}return true}cancelWakeAck();if(settingsCommand(command)){clearWakeLock();releaseWakeMusicWhenQuiet();return true}if(root.ExtractorProfiles?.handleRicky?.(command)){if(!root.ExtractorProfiles?.isVoiceFlowActive?.()){clearWakeLock();releaseWakeMusicWhenQuiet()}return true}const player=currentPlayer();if(player!==null){armed=true;armedPlayer=player;lastWake=Date.now();const routed=naturalDarts(command);disarm();if(route(routed,player)){clearWakeLock();paint();scheduleIdle();releaseWakeMusicWhenQuiet();return true}arm();return true}arm();return true}
  function parseResult(text){
   const raw=String(text||''),t=norm(raw);if(!t)return;
+  if(roastLoopTarget&&/^(?:shut up|ricky shut up|that s enough|thats enough|stop roasting|stop it|enough)$/.test(t)){stopRoastLoop(false);say('Righto.');return}
   if(handleWake(raw))return;
   if(ownEcho(raw))return;
-  if(root.ExtractorProfiles?.isVoiceFlowActive?.()&&root.ExtractorProfiles?.handleRicky?.(raw)){if(!root.ExtractorProfiles?.isVoiceFlowActive?.())releaseWakeMusicWhenQuiet();return}
-  if(isSpeaking())return;
+  if(root.ExtractorProfiles?.isVoiceFlowActive?.()&&root.ExtractorProfiles?.handleRicky?.(raw)){if(!root.ExtractorProfiles?.isVoiceFlowActive?.()){clearWakeLock();releaseWakeMusicWhenQuiet()}return}
+  if(isSpeaking()){if(armed)cutRickyOff();else return}
   if(!armed){paint();return}
-  const player=currentPlayer();if(player===null){if(settingsCommand(raw)||root.ExtractorProfiles?.handleRicky?.(raw)){disarm();paint();if(!root.ExtractorProfiles?.isVoiceFlowActive?.())releaseWakeMusicWhenQuiet();return}arm();return}
+  const player=currentPlayer();if(player===null){if(settingsCommand(raw)||root.ExtractorProfiles?.handleRicky?.(raw)){disarm();if(!root.ExtractorProfiles?.isVoiceFlowActive?.())clearWakeLock();paint();if(!root.ExtractorProfiles?.isVoiceFlowActive?.())releaseWakeMusicWhenQuiet();return}arm();return}
   if(player!==armedPlayer){disarm();paint();return}
-  const routed=naturalDarts(raw);disarm();if(route(routed,player)){paint();scheduleIdle();releaseWakeMusicWhenQuiet();return}
+  const routed=naturalDarts(raw);disarm();if(route(routed,player)){clearWakeLock();paint();scheduleIdle();releaseWakeMusicWhenQuiet();return}
   armed=true;armedPlayer=player;lastWake=Date.now();say("I didn't get that. Give me the score again, "+names()[player]+'.');paint();
  }
  function scheduleIdle(){
@@ -281,7 +342,7 @@
   const player=currentPlayer();if(lastPlayer!==null&&lastPlayer!==player)disarm();lastPlayer=player;
   paint();if(!blocked&&!recognition&&!restartTimer)connect();if(!idleTimer)scheduleIdle();
  }
- function stop(){enabled=false;pendingWake=false;disarm();lastPlayer=null;wakeMusicState=null;clearTimeout(restartTimer);clearTimeout(idleTimer);restartTimer=idleTimer=null;detach();root.ExtractorRecordedRicky?.stop();setPhase('off')}
+ function stop(){enabled=false;pendingWake=false;cancelWakeAck();clearWakeLock();disarm();lastPlayer=null;wakeMusicState=null;roastLoopTarget=null;clearTimeout(roastLoopTimer);roastLoopTimer=null;clearTimeout(restartTimer);clearTimeout(idleTimer);restartTimer=idleTimer=null;detach();root.ExtractorRecordedRicky?.stop();setPhase('off')}
  function retry(){if(!canListen())return;blocked=false;failures=0;detach();clearTimeout(restartTimer);restartTimer=null;start()}
  function wakeNow(){if(!canListen())return;if(phase==='listening'){arm();return}pendingWake=true;retry()}
  function refresh(){if(canListen())start();else stop()}
@@ -289,5 +350,5 @@
  root.addEventListener?.('extractor-speech-end',e=>{lastOwnSpeech=norm(e?.detail?.text||lastOwnSpeech);lastOwnSpeechEnded=Date.now()});
   root.document?.addEventListener?.('visibilitychange',()=>{if(!enabled)return;if(hidden()){disarm();detach();clearTimeout(restartTimer);restartTimer=null;setPhase('suspended')}else refresh()});
  root.addEventListener?.('pagehide',stop);
- root.ExtractorRicky={start,stop,refresh,retry,wakeNow,inGame,feedForTest:parseResult,isEnabled:()=>enabled,number,normaliseDartsForTest:naturalDarts,getState:()=>({phase,blocked,armed,player:armedPlayer,message:message()})};
+ root.ExtractorRicky={start,stop,refresh,retry,wakeNow,inGame,feedForTest:parseResult,isEnabled:()=>enabled,number,normaliseDartsForTest:naturalDarts,getState:()=>({phase,blocked,armed,player:armedPlayer,roastLoopTarget,lastRoastTarget,message:message()})};
 })();

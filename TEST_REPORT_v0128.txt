@@ -1,0 +1,12 @@
+Extractor's Play v0.12.8 device access restore
+
+Restored Settings dropdown: MIC / CAMERA ACCESS
+Options:
+- MIC ON · CAMERA READY
+- MIC ON · CAMERA ON REQUEST
+- MIC OFF · CAMERA READY
+- MANUAL / OFF
+
+Voice settings wired to same device-access state.
+Camera permission prepares access only; camera preview starts only during player selfie flow.
+All v0.12.7 listening, full-duplex, roast-loop and humour changes preserved.

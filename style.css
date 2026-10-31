@@ -133,3 +133,5 @@ body.menu-active{background:linear-gradient(#01060d25,#02081288),url('nexus-aren
 .music-mode-control{display:grid;gap:6px}.music-mode-control label{font-size:12px;font-weight:900;letter-spacing:.08em}.music-mode-control select{width:100%;padding:10px;border-radius:8px}
 .profile-camera{width:min(100%,320px);aspect-ratio:1/1;object-fit:cover;border-radius:14px;margin:10px 0;background:#000}
 .permission-wrap{max-width:720px;margin:0 auto;padding-top:10vh}.permission-panel{text-align:center}.permission-panel h1{margin:10px 0}.permission-panel button{width:100%;margin-top:10px;min-height:50px}
+
+.device-access-control{display:grid;gap:7px}.device-access-control select{width:100%;min-height:46px;padding:10px;border-radius:8px;border:1px solid #315c76;background:#04101b;color:#eaf8ff}
