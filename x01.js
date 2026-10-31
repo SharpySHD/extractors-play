@@ -16,7 +16,7 @@
  function render(){
   document.body.classList.remove('menu-active');
   const locked=game.phase!=='throw';
-  $('app').innerHTML=`<div class="wrap">${header()}<div class="row" style="margin:12px 0"><button id="xHome">⌂ MENU</button><b style="text-align:center">${game.start} · ROUND ${game.round}</b><button id="xNew">↻ NEW</button></div><p class="tiny" style="text-align:center">BETA v0.11.8 · SINGLE IN · DOUBLE OUT</p>
+  $('app').innerHTML=`<div class="wrap">${header()}<div class="row" style="margin:12px 0"><button id="xHome">⌂ MENU</button><b style="text-align:center">${game.start} · ROUND ${game.round}</b><button id="xNew">↻ NEW</button></div><p class="tiny" style="text-align:center">BETA v0.12.2 · SINGLE IN · DOUBLE OUT</p>
   <div class="scores">${names().map((name,i)=>`<div class="score ${game.turn===i?'active':''}"><div><small class="tiny">REMAINING</small><div>${playerLabel(i)}</div></div><strong>${game.scores[i]}</strong></div>`).join('')}</div>
   <section class="panel"><div class="row"><b class="cyan">${playerLabel(game.turn)} · ${game.darts.length}/3 DARTS</b><small>VISIT START ${game.visitStart}</small></div><div class="pills">${[0,1,2].map(i=>`<div class="pill"><small>DART ${i+1}</small><br>${game.darts[i]?label(game.darts[i]):'—'}</div>`).join('')}</div>
   <p id="xStatus" class="status" role="status">${game.notice}</p>

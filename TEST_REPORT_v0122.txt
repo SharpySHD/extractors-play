@@ -1,0 +1,10 @@
+Extractor's Play v0.12.2
+
+Added/verified:
+- Score is announced before post-score banter.
+- Any accepted score under 20 routes to Ricky low-score reaction.
+- Every low-score Ricky reaction starts with a laugh and player roast.
+- Score 20 is NOT treated as under-20.
+- Existing natural dart grammar and double/triple + number rules preserved.
+- Jordy/Dwayno roast memory, tell-me-more escalation and meltdown logic preserved.
+- Ricky recorded reaction mapping preserved; low scores still queue the existing emotion clip where cooldown allows.

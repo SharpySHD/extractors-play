@@ -1,0 +1,30 @@
+Extractor's Play v0.12.0 full-repository stability pass
+
+Verified in source/tests:
+- Full GitHub repository used as source of truth.
+- All JavaScript files pass `node --check` syntax validation.
+- Natural darts parser tests pass:
+  * 1 20 1 19 1 18 -> single 20 single 19 single 18
+  * one twenty one nineteen one eighteen -> same
+  * a 20 a 19 an 18 -> same
+  * give me a 20 a 19 an 18 -> same
+  * 2 20 3 19 1 18 -> double 20 triple 19 single 18
+  * 20 19 18 -> defaults to singles
+- Ricky menu/game listener now reports MIC ON only from live recognition state, not a saved localStorage flag.
+- Ricky listener is permitted on menu and gameplay and reconnects after speech-service endings while the tab is visible.
+- Settings includes live Ricky microphone state + Reconnect Mic.
+- Mic/camera permission gate runs before intro; a previously-granted permission is revalidated with getUserMedia.
+- Ricky remains the default MC on fresh devices.
+- Music policy is authoritative:
+  * Always: playback is maintained.
+  * Voice controlled: on/off state is persisted separately.
+  * Off: later intro/menu/game events cannot silently restart music.
+- Intro can force its own playback, then returns to the saved music policy when it exits.
+- Spotify/settings commands remain wired.
+- Ricky player registration/selfie flow remains wired to the persistent recognizer.
+- Jordy and Dwayno/Duano roast banks remain present.
+- Visible build labels are v0.12.0.
+
+Browser limitation:
+- Chrome/Android controls permission dialogs. The app can request microphone/camera before intro but cannot auto-approve them.
+- Live Android speech service behaviour still requires device testing because Web Speech is browser/service dependent.

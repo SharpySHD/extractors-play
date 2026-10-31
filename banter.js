@@ -38,16 +38,18 @@
   'Well played. You made that look suspiciously intentional.'
  ],
  low:[
-  'Room for improvement. Fortunately, we have a whole arena.',
-  'The comeback department remains open.',
-  'A quiet visit. Let us call it suspense.',
-  'The board has survived that conversation.',
-  'We will file that under character development.',
-  'Not every visit needs fireworks. Apparently.',
-  'A tactical pause in the scoring department.',
-  'Plenty of story left in this game.',
-  'The next visit has an excellent chance of being more interesting.',
-  'Reset the shoulders. Leave that visit behind.'
+  'Hahaha! That was fucking ordinary.',
+  'Ha! Under twenty. The board barely noticed you were here.',
+  'Hahaha! That is not a visit, that is a cry for help.',
+  'Ha ha! I have seen shopping trolleys group tighter than that.',
+  'Hahaha! Mate, even the scoreboard is embarrassed.',
+  'Ha! The comeback department just changed its phone number.',
+  'Hahaha! That score needs a witness protection program.',
+  'Ha ha! You threw three darts and somehow made subtraction exciting.',
+  'Hahaha! The board survived. Your dignity is still being assessed.',
+  'Ha! Under twenty. Maybe aim at the big round thing next time.',
+  'Hahaha! That was less darts and more decorative wall testing.',
+  'Ha ha! Ricky has officially opened an investigation into that visit.'
  ],
  bust:[
   'Bust. The arithmetic has exercised its right of refusal.',

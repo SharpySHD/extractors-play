@@ -1,0 +1,17 @@
+Extractor's Play v0.12.2 roast/wake regression report
+
+PASS - All edited JavaScript files pass node --check.
+PASS - "Hey Ricky" pauses Nexus music immediately.
+PASS - Music resumes after a handled score/command according to the saved music policy.
+PASS - "1 20 1 19 1 18" normalises to single 20 + single 19 + single 18.
+PASS - "a 20 a 19 an 18" normalises to three singles.
+PASS - "2 20 3 19 1 18" normalises to double 20 + triple 19 + single 18.
+PASS - "double 20" and "triple 19" remain valid.
+PASS - bare "double" and bare "triple" are not converted into darts; multiplier requires a following board number.
+PASS - Jordy and Dwayno/Duano roast banks remain present.
+PASS - "Hey Ricky, tell me more" retains the last roast target and escalates to the cruder bank.
+PASS - later roast follow-ups can trigger Ricky meltdown behaviour using existing Ricky reaction audio where available.
+PASS - supplied Ricky MP3 assets remain in the full repository.
+PASS - visible build labels and cache tags are v0.12.2 / 0121-roastwake1.
+
+Live browser speech recognition, autoplay policy, microphone permission and Android Chrome behaviour still require real-device testing after GitHub Pages deployment.

@@ -1,8 +1,16 @@
-# Extractor’s Play — public device test v0.11.8
+# Extractor’s Play — public device test v0.12.2
+
+Full-repository stability pass. Mic/camera permission is requested before intro; Ricky is default and the live recognizer state drives MIC status. Music mode is authoritative across intro/menu/gameplay.
 
 Current public browser test build for Extractor’s Play.
 
-## Included in v0.11.8
+## v0.12.2 roast + wake update
+- Saying **Hey Ricky** pauses Nexus music immediately; it resumes after the command/score exchange according to the saved music mode.
+- Ricky remembers the last roast target. After roasting Jordy or Dwayno/Duano, **Hey Ricky, tell me more** continues on the same person and gets cruder.
+- Later follow-ups can trigger an over-the-top Ricky meltdown using the existing Ricky reaction audio plus a scripted rant.
+- Double/triple shorthand remains strict: multiplier words/numbers only form a dart when followed by a board number (for example `double 20`, `2 20`, `triple 19`, `3 19`). Plain board numbers default to singles.
+
+## Included in v0.12.2
 - Nexus home first; main screen kept to games, players, player-related controls and Start.
 - All other controls live behind the Settings gear.
 - Before the intro, the app asks once for microphone + front-camera permission. Once granted, the intro starts.

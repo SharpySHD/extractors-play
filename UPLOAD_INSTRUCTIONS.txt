@@ -1,24 +1,20 @@
-EXTRACTOR'S PLAY v0.11.8 — ONE CLEAN GITHUB UPLOAD
+EXTRACTOR'S PLAY v0.12.2 - FULL REPOSITORY UPLOAD
 
-Upload ALL files in this folder to the ROOT of SharpySHD/extractors-play.
-Replace matching files, then commit once.
+1. Open the SharpySHD/extractors-play GitHub repository.
+2. Upload the CONTENTS of this folder to the repository root.
+3. Replace matching files. Do not delete media/assets that are already present unless a matching file in this package replaces them.
+4. Commit once.
+5. Open https://sharpyshd.github.io/extractors-play/
+6. Close/reopen the tab or hard refresh if an older cached build appears.
+7. Confirm the visible version says v0.12.2.
 
-Files:
-- README.md
-- app.js
-- index.html
-- music.js
-- ricky-wake.js
-- profiles.js
-- stage.js
-- style.css
-- sw.js
-- x01.js
+Key test phrases:
+- Hey Ricky
+- 1 20 1 19 1 18
+- 2 20 3 19 1 18
+- Hey Ricky, tell me something about Jordy
+- Hey Ricky, tell me more
+- Hey Ricky, tell me something about Dwayno
+- Hey Ricky, tell me more
 
-Do not upload the ZIP itself into the repo.
-Do not delete media/assets that are already in the repo.
-
-After commit, open:
-https://sharpyshd.github.io/extractors-play/
-
-If an older version remains visible, close the tab completely and reopen the URL. v0.11.8 is printed on the menu/game UI and cache-busting is updated.
+Expected wake behaviour: music pauses on "Hey Ricky" and resumes only after the handled exchange, following the saved music setting.
