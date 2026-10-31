@@ -127,3 +127,7 @@ body.menu-active{background:linear-gradient(#01060d25,#02081288),url('nexus-aren
 .ricky-mic-bar{display:flex;align-items:center;gap:10px;justify-content:space-between;margin:10px 0;padding:10px 12px;border:1px solid #3a89a9;border-radius:8px;background:#031524}
 .ricky-mic-bar p{margin:0;font-size:12px;color:#9ee9ff;line-height:1.5}.ricky-mic-bar button{flex-shrink:0;font-size:11px;min-height:44px}
 @media(max-width:450px){.ricky-mic-bar{align-items:stretch;flex-direction:column}}
+
+.spotify-control{display:grid;gap:8px}.spotify-control>button{width:100%;min-height:46px}.spotify-panel{display:grid;gap:10px;padding:10px;border:1px solid #315c76;border-radius:10px;background:#04101b}.spotify-actions{display:grid;grid-template-columns:1fr auto auto;gap:7px}.spotify-actions input{min-width:0;padding:10px;border-radius:7px;border:1px solid #355f76;background:#061323;color:#eaf8ff}.spotify-actions button{font-size:10px}.spotify-frame{width:100%;height:152px;border:0;border-radius:10px;background:#000}.hidden{display:none!important}@media(max-width:650px){.spotify-actions{grid-template-columns:1fr}.spotify-actions button{width:100%}}
+
+.music-mode-control{display:grid;gap:6px}.music-mode-control label{font-size:12px;font-weight:900;letter-spacing:.08em}.music-mode-control select{width:100%;padding:10px;border-radius:8px}

@@ -18,7 +18,9 @@ window.ExtractorSpeak=speak;
 function cue(name,cb){if(window.ExtractorStage)return window.ExtractorStage.say(name,cb);speak({chooseWeapon:'Choose your weapon.',selected:'Selected.',selectionTime:'Selection time.'}[name],cb)}
 function marks(n){return n?'X'.repeat(Math.min(n,3)):'—'}
 function targetClosed(key){return state.players.every(p=>(p.marks[key]||0)>=3)}
-function scoreCall(n,cb,name){const value=Math.max(0,Math.min(180,Math.round(Number(n)||0)));let choice='';try{choice=localStorage.getItem('extractorMCVoice')||''}catch(_){}const done=()=>{if(choice==='__ricky__'&&window.ExtractorBanter?.isEnabled?.()!==false&&Math.random()<.55){const who=name||playerName(state.turn);const lines=["That'll do, "+who+'.',"Not bad, "+who+'.',"Righto. Next dart hero.","Score's in. Carry on.","Beautiful. Now do it again."];speak(lines[Math.floor(Math.random()*lines.length)],cb,'mc')}else cb?.()};speak(choice==='__ricky__'?String(value)+'. '+(name||playerName(state.turn))+'.':String(value),done,'mc')}
+function scoreCall(n,cb,name){const value=Math.max(0,Math.min(180,Math.round(Number(n)||0)));let choice='';try{choice=localStorage.getItem('extractorMCVoice')||''}catch(_){}speak(choice==='__ricky__'?String(value)+'. '+(name||playerName(state.turn))+'.':String(value),cb,'mc')}
+function postScoreBanter(total,name,topic='next'){let choice='';try{choice=localStorage.getItem('extractorMCVoice')||''}catch(_){}if(choice!=='__ricky__'||window.ExtractorBanter?.isEnabled?.()===false)return;const line=window.ExtractorBanter?.pick?.(topic)||window.ExtractorBanter?.pick?.(Number(total)>=60?'good':Number(total)<20?'low':'next');if(line)speak(line,null,'mc')}
+window.ExtractorPostScoreBanter=postScoreBanter;
 function rickyShanghai(){window.ExtractorRecordedRicky?.queue('shanghai');let choice='';try{choice=localStorage.getItem('extractorMCVoice')||''}catch(_){}if(choice==='__ricky__')speak("That's a fucking Shang dog, you goddamn son of a bitch!",null,'mc')}
 function effectSignature(o){return JSON.stringify([Object.entries(o.marks||{}).sort(),Number(o.points)||0])}
 function collapseEquivalentOptions(items){const seen=new Set();return items.filter(o=>{const sig=effectSignature(o);if(seen.has(sig))return false;seen.add(sig);return true})}
@@ -39,7 +41,7 @@ function menu(){
  if(state.phase==='done'&&state.reviewWaiting){state.reviewWaiting=false;delete state.handoffAt;}
  window.ExtractorStage?.cancel();document.body.classList.remove('bull-active','intro-active');document.body.classList.add('menu-active');state.screen='menu';state.needsBull=false;save();stop();
  $('app').innerHTML=`<div class="nexus-home"><section class="nexus-hero">
-   <div class="nexus-title">${header()}<p class="tiny nexus-version">PUBLIC DEVICE TEST · v0.10.10</p></div>
+   <div class="nexus-title">${header()}<p class="tiny nexus-version">PUBLIC DEVICE TEST · v0.11.5</p></div>
    <button id="settingsButton" class="settings-gear" aria-label="Settings">⚙</button>
    <div class="big-fella-decks" aria-label="Big Fella at the decks"></div>
    <div class="extractor-guard" aria-hidden="true"></div>
@@ -63,7 +65,8 @@ function menu(){
     <button id="banterToggle">X-MAN BANTER · ${window.ExtractorBanter?.isEnabled()?'ON':'OFF'}</button>
     <div class="mc-voice-control"><label for="mcVoice">X-MAN MC VOICE</label><select id="mcVoice"><option value="">AUTOMATIC · ORIGINAL MC</option><option value="__ricky__">RICKY · CHAOS MODE</option></select><button id="testMC">▶ TEST MC</button></div>
     <label class="settings-volume" for="settingsVolume">NEXUS SOUND <output id="settingsVolumeValue">100%</output><input id="settingsVolume" type="range" min="0" max="100" value="100"></label>
-    <button id="settingsMusic">▶ / Ⅱ MUSIC</button>
+    <div class="music-mode-control"><label for="musicMode">NEXUS MUSIC</label><select id="musicMode"><option value="always">PLAY ALWAYS</option><option value="voice">VOICE CONTROLLED · HEY RICKY</option><option value="off">OFF</option></select></div>
+    <div class="spotify-control"><button id="spotifyToggle" type="button">♫ SPOTIFY</button><div id="spotifyPanel" class="spotify-panel hidden"><div class="spotify-actions"><input id="spotifyUrl" type="url" inputmode="url" placeholder="Paste Spotify track / album / playlist link"><button id="spotifyLoad" type="button">LOAD PLAYER</button><button id="spotifyOpen" type="button">OPEN SPOTIFY</button></div><p id="spotifyStatus" class="tiny">Spotify stays inside Settings. Paste a Spotify link to load the player here.</p><iframe id="spotifyFrame" class="spotify-frame hidden" title="Spotify player" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe></div></div>
     <button id="developerButton">DEVELOPER · FILES / INFO / MIC</button>
     <button id="knowledgeButton">X-MAN KNOWLEDGE &amp; MEMORY</button>
    </div></dialog></div>`;
@@ -71,9 +74,12 @@ function menu(){
  $('settingsButton').onclick=openSettings;$('closeSettings').onclick=()=>$('settingsDialog').close();$('replayIntro').onclick=()=>{$('settingsDialog').close();intro()};
  $('banterToggle').onclick=()=>{$('banterToggle').textContent='X-MAN BANTER · '+(window.ExtractorBanter.toggle()?'ON':'OFF')};
  $('developerButton').onclick=()=>{$('settingsDialog').close();window.ExtractorDeveloper?.open(menu)};$('knowledgeButton').onclick=()=>{$('settingsDialog').close();window.ExtractorMemory?.open(menu)};
- $('settingsVolume').oninput=e=>{const v=Number(e.target.value)/100;window.extractorMusic?.setLevel(v);$('settingsVolumeValue').textContent=Math.round(v*100)+'%'};$('settingsMusic').onclick=()=>{const m=window.extractorMusic?.media;if(!m)return;m.paused?window.extractorMusic.start():window.extractorMusic.pause()};
+ $('settingsVolume').oninput=e=>{const v=Number(e.target.value)/100;window.extractorMusic?.setLevel(v);$('settingsVolumeValue').textContent=Math.round(v*100)+'%'};const musicMode=$('musicMode');if(musicMode){musicMode.value=window.extractorMusic?.getMode?.()||'always';musicMode.onchange=()=>window.extractorMusic?.setMode?.(musicMode.value)};
+ const spotifyEmbed=value=>{try{const u=new URL(String(value||'').trim());if(!/(^|\.)spotify\.com$/i.test(u.hostname)&&u.hostname.toLowerCase()!=='open.spotify.com')return '';const m=u.pathname.match(/^\/(track|album|playlist|episode|show)\/([A-Za-z0-9]+)(?:\/|$)/);return m?`https://open.spotify.com/embed/${m[1]}/${m[2]}?utm_source=generator`:''}catch(_){return ''}};
+ const spotifyPanel=$('spotifyPanel'),spotifyFrame=$('spotifyFrame'),spotifyUrl=$('spotifyUrl'),spotifyStatus=$('spotifyStatus');let savedSpotify='';try{savedSpotify=localStorage.getItem('extractorSpotifyUrl')||''}catch(_){}if(savedSpotify){spotifyUrl.value=savedSpotify;const src=spotifyEmbed(savedSpotify);if(src){spotifyFrame.src=src;spotifyFrame.classList.remove('hidden');spotifyStatus.textContent='Spotify player ready.'}}
+ $('spotifyToggle').onclick=()=>spotifyPanel.classList.toggle('hidden');$('spotifyOpen').onclick=()=>{window.extractorMusic?.pause();window.open('https://open.spotify.com/','_blank','noopener,noreferrer')};$('spotifyLoad').onclick=()=>{const src=spotifyEmbed(spotifyUrl.value);if(!src){spotifyStatus.textContent='Paste a Spotify track, album, playlist, episode or show link.';return}try{localStorage.setItem('extractorSpotifyUrl',spotifyUrl.value.trim())}catch(_){}window.extractorMusic?.pause();spotifyFrame.src=src;spotifyFrame.classList.remove('hidden');spotifyStatus.textContent='Spotify player loaded. Nexus music paused so the two do not fight.'};
  bindMCVoices();
- const beginMickey=()=>{stop();try{localStorage.setItem('extractorActiveMode','mickey')}catch(_){}const begin=winner=>{if(winner!==undefined){state.turn=winner;state.starter=winner;state.needsBull=false}state.screen='game';save();render();window.ExtractorRicky?.refresh()};const freshGame=state.round===1&&state.phase==='throw'&&!state.darts.length&&state.players.every(p=>p.points===0&&Object.keys(p.marks).length===0);if(freshGame&&window.ExtractorStage)window.ExtractorStage.bullOff(begin);else{begin();window.extractorMusic?.fadeOut(2);cue('selected')}};
+ const beginMickey=()=>{stop();try{localStorage.setItem('extractorActiveMode','mickey')}catch(_){}const begin=winner=>{if(winner!==undefined){state.turn=winner;state.starter=winner;state.needsBull=false}state.screen='game';save();render();window.ExtractorRicky?.refresh()};const freshGame=state.round===1&&state.phase==='throw'&&!state.darts.length&&state.players.every(p=>p.points===0&&Object.keys(p.marks).length===0);if(freshGame&&window.ExtractorStage)window.ExtractorStage.bullOff(begin);else{begin();cue('selected')}};
  $('mickey').onclick=()=>{clearInterval(menuCarouselTimer);beginMickey()};
  window.ExtractorX01?.bindMenu();
  if(!window.ExtractorProfiles?.attachMenu())cue('chooseWeapon');
@@ -99,7 +105,7 @@ function render(){
  <div class="row" style="margin-top:7px"><button data-bull="1" ${state.phase!=='throw'?'disabled':''}>GREEN 25</button><button data-bull="2" ${state.phase!=='throw'?'disabled':''}>RED 50</button><button id="miss" ${state.phase!=='throw'?'disabled':''}>MISS</button></div>
  <div class="row" style="margin-top:8px"><button id="undo">↶ UNDO</button><button id="changeClaim" class="${state.phase==='done'&&state.reviewBase?'':'hidden'}">CHANGE DECISION</button><button id="next" ${state.phase!=='done'?'disabled':''}>NEXT PLAYER →</button></div>
  <div class="tiny" style="margin-top:8px">Manual input • OMNI integration pending • Scores saved on this device</div></section></div>
- <section class="ricky-mic-bar" aria-label="Ricky microphone"><p id="rickyMicStatus" role="status">MIC STARTING · allow microphone access if prompted.</p><button id="rickyMicRetry" type="button">🎙 RECONNECT MIC</button></section><section class="panel voice" id="voicepanel"><div class="row"><span style="font-size:25px;flex:0">🤖</span><div style="flex:5"><b class="cyan" style="font-size:12px">EXTRACTOR VOICE CONTROL · v0.10.10</b><div id="message" class="status">${state.phase==='throw'?'Say your darts, or enter them by touch. Then choose what to take.':state.phase==='choose'?"Selection time.":state.phase==='win'?'GAME OVER!':'Turn scored. Next player.'}</div></div><strong id="seconds" style="text-align:right;flex:0">—</strong></div>
+ <section class="ricky-mic-bar" aria-label="Ricky microphone"><p id="rickyMicStatus" role="status">MIC STARTING · allow microphone access if prompted.</p><button id="rickyMicRetry" type="button">🎙 RECONNECT MIC</button></section><section class="panel voice" id="voicepanel"><div class="row"><span style="font-size:25px;flex:0">🤖</span><div style="flex:5"><b class="cyan" style="font-size:12px">EXTRACTOR VOICE CONTROL · v0.11.5</b><div id="message" class="status">${state.phase==='throw'?'Say your darts, or enter them by touch. Then choose what to take.':state.phase==='choose'?"Selection time.":state.phase==='win'?'GAME OVER!':'Turn scored. Next player.'}</div></div><strong id="seconds" style="text-align:right;flex:0">—</strong></div>
  <div id="choices" class="options ${state.phase==='choose'?'':'hidden'}"></div>
  <div class="row" style="margin-top:7px"><button id="listen" class="primary hidden">🎙️ LAUNCH WHEN READY</button><button id="pause" class="hidden">⏸ WAIT A SEC</button><button id="confirm" class="${state.phase==='choose'?'primary':'hidden'}" ${state.phase==='choose'?'':'disabled'}>✓ CONFIRM CLAIM</button></div>
  <div id="info" class="tiny muted" style="margin-top:7px">Microphone and speech depend on Safari/browser support. Touch controls always work.</div></section></div>`;
@@ -253,7 +259,7 @@ function commit(config={}){
  state.phase='done';state.pendingWinner=finished;state.reviewBase=baseline;state.reviewWaiting=false;delete state.handoffAt;
  save();render();
  const added=o.points+(bonus?100:0);
- const announce=()=>{if(bonus)rickyShanghai();else scoreCall(added)};
+ const announce=()=>{if(bonus)window.ExtractorRecordedRicky?.queue('shanghai');const who=playerName(state.turn);scoreCall(added,()=>postScoreBanter(added,who,bonus?'shanghai':state.nextBanter),who)};
  if(config.automatic&&state.darts.every(d=>d.n===20&&d.m===3)&&window.ExtractorStage)window.ExtractorStage.maximum(announce);else announce();
 
 }
@@ -305,6 +311,15 @@ function intro(){
 }
 
 
+window.ExtractorSettings={
+ open:()=>{const d=$('settingsDialog');if(d&&!d.open)d.showModal()},
+ close:()=>{const d=$('settingsDialog');if(d?.open)d.close()},
+ replayIntro:()=>intro(),
+ developer:()=>window.ExtractorDeveloper?.open(menu),
+ knowledge:()=>window.ExtractorMemory?.open(menu),
+ spotify:()=>{const panel=$('spotifyPanel');if(panel)panel.classList.remove('hidden');const d=$('settingsDialog');if(d&&!d.open)d.showModal()},
+ closeSpotify:()=>{const panel=$('spotifyPanel');if(panel)panel.classList.add('hidden')}
+};
 window.speechSynthesis?.addEventListener?.('voiceschanged',()=>{if($('mcVoice'))bindMCVoices()});
 // Startup: cinema first on every fresh load, then the Nexus menu and registration.
 // Saved scoring state and profiles remain intact.

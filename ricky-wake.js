@@ -8,6 +8,30 @@
  const activeMode=()=>{try{return localStorage.getItem('extractorActiveMode')||'menu'}catch(_){return 'menu'}};
  const names=()=>[root.playerName?.(0)||'Player 1',root.playerName?.(1)||'Player 2'];
  const norm=s=>String(s||'').toLowerCase().replace(/[^a-z0-9 ]+/g,' ').replace(/\s+/g,' ').trim();
+ const wordNumber={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19,twenty:20};
+ function boardNumber(token){if(/^\d+$/.test(token)){const n=Number(token);return n>=1&&n<=20?n:null}return Object.hasOwn(wordNumber,token)?wordNumber[token]:null}
+ function naturalDarts(text){
+  let t=norm(text)
+   .replace(/\b(?:can you|could you|would you)\s+give\s+(?:me|us)\b/g,' ')
+   .replace(/\b(?:give|gimme)\s+(?:me|us)\b/g,' ')
+   .replace(/\b(?:i will|i ll|ill)\s+take\b/g,' ')
+   .replace(/\b(?:how about|what about|make mine|put me on|put us on)\b/g,' ')
+   .replace(/\bplease\b/g,' ').replace(/\s+/g,' ').trim();
+  if(!t)return text;
+  const tokens=t.split(' '),out=[];let i=0,explicit=0,plain=0;
+  while(i<tokens.length){
+   const tok=tokens[i],next=boardNumber(tokens[i+1]||'');
+   if((tok==='single'||tok==='double'||tok==='triple')&&next){out.push(tok+' '+next);explicit++;i+=2;continue}
+   if((tok==='1'||tok==='one'||tok==='2'||tok==='two'||tok==='3'||tok==='three')&&next){out.push(({1:'single',one:'single',2:'double',two:'double',3:'triple',three:'triple'})[tok]+' '+next);explicit++;i+=2;continue}
+   if((tok==='a'||tok==='an')&&next){out.push('single '+next);explicit++;i+=2;continue}
+   const n=boardNumber(tok);if(n){out.push(String(n));plain++;i++;continue}
+   if(['and','then'].includes(tok)){i++;continue}
+   return text;
+  }
+  if(explicit){return out.map(x=>/^\d+$/.test(x)?'single '+x:x).join(' ')}
+  if(plain>=2){return out.map(x=>'single '+x).join(' ')}
+  return text;
+ }
  function number(text){
   let t=norm(text).replace(/\b(score|points?|scored|i got|got|for me|please|mate)\b/g,' ').replace(/\s+/g,' ').trim();
   const direct=t.match(/\b(180|1[0-7]\d|[1-9]?\d)\b/);if(direct&&/^\D*\d+\D*$/.test(t))return +direct[1];
@@ -68,23 +92,91 @@
   try{mic.start();if(recognition===mic&&phase==='starting')startTimer=setTimeout(()=>{if(recognition!==mic||phase!=='starting')return;detach();scheduleRestart('Speech service did not start. Retrying.',1500)},15000)}
   catch(e){if(recognition!==mic)return;detach();if(['NotAllowedError','SecurityError'].includes(e.name)){blocked=true;setPhase('blocked','MIC PERMISSION NEEDED · allow access, then tap Reconnect Mic.')}else{failures++;scheduleRestart('Speech service could not start. Retrying.',Math.min(8000,500*2**Math.min(failures,4)))}}
  }
- function wakeReply(){
-  const lines=['What?','What now?','Shoot.','Yeah?','Go on.'];return lines[Math.floor(Math.random()*lines.length)];
- }
+ function wakeReply(){const lines=['What?','What now?','Shoot.','Yeah?','Go on.'];return lines[Math.floor(Math.random()*lines.length)]}
  function arm(){
   const player=currentPlayer();if(player===null)return;
-  root.stop?.();armed=true;armedPlayer=player;lastWake=Date.now();paint();
-  say(wakeReply(),()=>{if(armed&&armedPlayer===currentPlayer()){lastWake=Date.now();paint()}});
+  root.ExtractorRecordedRicky?.stop();try{root.speechSynthesis?.cancel()}catch(_){}armed=true;armedPlayer=player;lastWake=Date.now();paint();
+  say(wakeReply(player),()=>{if(armed&&armedPlayer===currentPlayer()){lastWake=Date.now();paint()}});
   status('Ricky is listening for '+names()[player]+'.');scheduleIdle();
+ }
+ const jordyRoasts=[
+  "Jordy couldn't hit water if he fell out of a fucking boat.",
+  "Jordy's grouping looks like the darts are trying to escape him.",
+  "I've seen better accuracy from a bloke sneezing with a nail gun.",
+  "Jordy throws like the board owes him money and he's scared to collect.",
+  "Tell Jordy the treble twenty isn't a fucking rumour.",
+  "Jordy's darts have seen more of the wall than the board.",
+  "If confidence scored points, Jordy would be world champion. Shame darts don't work like that.",
+  "Jordy makes a twenty look like a fucking postage stamp.",
+  "I've seen GPS units with less trouble finding twenty.",
+  "Jordy's checkout plan is apparently hope, panic, and blame the lighting.",
+  "If missing was an Olympic event, Jordy would need a bigger trophy cabinet.",
+  "Jordy isn't playing around the clock. He's playing around the fucking building.",
+  "Somebody tell Jordy the spider isn't a target map.",
+  "Jordy throws three darts and somehow the board looks relieved.",
+  "I'd roast Jordy's average, but I don't kick numbers when they're already down.",
+  "Jordy has the confidence of Phil Taylor and the grouping of a shopping trolley.",
+  "That bloke couldn't buy a treble with exact change.",
+  "Jordy's darts are socially distancing from each other.",
+  "Jordy calls it a setup shot because even he doesn't know where the fuck it went.",
+  "The board has filed a restraining order against Jordy's accuracy.",
+  "Jordy's best double is double-checking whether he brought the right darts.",
+  "I've seen stormtroopers watch Jordy and say, mate, tighten the grouping.",
+  "Jordy doesn't need a coach. He needs a search party for his darts.",
+  "Tell Jordy to aim at the number next door. He might accidentally hit the one he wants.",
+  "Jordy's form is beautiful right up until the dart leaves his fucking hand.",
+  "The only thing Jordy closes consistently is the fridge.",
+  "Jordy's scoreboard needs a mercy rule.",
+  "If bullshit added twenty points, Jordy would never lose.",
+  "I asked the board about Jordy. It just sighed.",
+  "Jordy's not out of form. This might actually be the form.",
+  "All the vegetables disappeared out of the fridge and Jordy stayed in his room for three days. I'm not accusing anyone, but the cucumber's lawyer has advised it not to comment.",
+  "Fridge got cleaned out, Jordy vanished into his room for three days. Coincidence? The carrots reckon otherwise.",
+  "All the vegetables went missing and Jordy went into lockdown. I've seen less suspicious behaviour on Border Security.",
+  "The veggies disappeared and Jordy didn't surface for three days. Check the crisper drawer for witnesses.",
+  "Jordy's a sausage man. Even the dog disappears for days when he starts getting ideas.",
+  "Vegetables vanish, Jordy locks himself away, then the dog goes missing. That's not a household, that's a crime documentary.",
+  "Jordy doesn't need Tinder. He's got a sausage, a fridge full of missing produce, and one very nervous dog.",
+  "Every time Jordy shuts the bedroom door, the dog starts packing an overnight bag.",
+  "The dog hears Jordy say come here mate and immediately applies for witness protection.",
+  "Jordy's room has more missing persons reports than the local police station."
+ ];
+ function jordyRoast(){return jordyRoasts[Math.floor(Math.random()*jordyRoasts.length)]}
+ function setMcRicky(on){try{localStorage.setItem('extractorMCVoice',on?'__ricky__':'')}catch(_){}const el=root.document?.getElementById?.('mcVoice');if(el){el.value=on?'__ricky__':'';el.dispatchEvent(new Event('change'))}root.ExtractorRicky?.refresh?.()}
+ function setBanter(on){const b=root.ExtractorBanter;if(!b)return false;const current=b.isEnabled?.()!==false;if(current!==on)b.toggle?.();const el=root.document?.getElementById?.('banterToggle');if(el)el.textContent='X-MAN BANTER · '+(b.isEnabled?.()!==false?'ON':'OFF');return true}
+ function setSoundPercent(n){n=Math.max(0,Math.min(100,Math.round(n)));root.extractorMusic?.setLevel?.(n/100);const slider=root.document?.getElementById?.('settingsVolume');const out=root.document?.getElementById?.('settingsVolumeValue');if(slider)slider.value=n;if(out)out.textContent=n+'%';return n}
+ function setMusicMode(mode){root.extractorMusic?.setMode?.(mode);const el=root.document?.getElementById?.('musicMode');if(el)el.value=mode}
+ function settingsCommand(command){
+  const c=norm(command);if(!c)return false;
+  if(/(?:tell me something about|what do you reckon about|what do you think about|give .* some shit|roast) jordy/.test(c)){say(jordyRoast());return true}
+  if(/^(?:open|show) settings$/.test(c)){root.ExtractorSettings?.open?.();say('Settings.');return true}
+  if(/^(?:close|hide) settings$/.test(c)){root.ExtractorSettings?.close?.();say('Done.');return true}
+  if(/^(?:turn |switch )?(?:ricky|ricky mode|chaos mode) on$|^use ricky(?: voice)?$/.test(c)){setMcRicky(true);say('Ricky on.');return true}
+  if(/^(?:turn |switch )?(?:ricky|ricky mode|chaos mode) off$|^use (?:original|automatic)(?: mc| voice)?$/.test(c)){setMcRicky(false);say('Ricky off.');return true}
+  if(/^(?:turn |switch )?banter on$/.test(c)){setBanter(true);say('Banter on.');return true}
+  if(/^(?:turn |switch )?banter off$/.test(c)){setBanter(false);say('Banter off.');return true}
+  let m=c.match(/^(?:set )?(?:sound|volume|nexus sound)(?: to)? (\d{1,3})(?: percent)?$/);if(m){const n=setSoundPercent(+m[1]);say(n+' percent.');return true}
+  if(/^(?:turn |switch )?(?:music|nexus music) off$|^music off$/.test(c)){setMusicMode('voice');root.extractorMusic?.pause?.();say('Music off.');return true}
+  if(/^(?:turn |switch )?(?:music|nexus music) on$|^music on$/.test(c)){setMusicMode('voice');root.extractorMusic?.start?.();say('Music on.');return true}
+  if(/^(?:set )?music (?:to )?(?:always|always on|play always)$|^play music always$/.test(c)){setMusicMode('always');say('Always on.');return true}
+  if(/^(?:set )?music (?:to )?(?:voice|voice control|voice controlled|ricky control)$/.test(c)){setMusicMode('voice');say('Voice control.');return true}
+  if(/^(?:set )?music (?:to )?(?:off|always off)$/.test(c)){setMusicMode('off');say('Music off.');return true}
+  if(/^(?:open|show) spotify(?: settings)?$|^spotify$/.test(c)){root.ExtractorSettings?.spotify?.();say('Spotify.');return true}
+  if(/^(?:close|hide) spotify(?: settings)?$/.test(c)){root.ExtractorSettings?.closeSpotify?.();say('Done.');return true}
+  if(/^(?:replay|play) (?:the )?intro$|^intro again$/.test(c)){say('Intro.',()=>root.ExtractorSettings?.replayIntro?.());return true}
+  if(/^(?:open|show) developer(?: desk| settings)?$/.test(c)){root.ExtractorSettings?.developer?.();say('Developer.');return true}
+  if(/^(?:open|show) (?:knowledge|memory|x man knowledge|x man memory)$/.test(c)){root.ExtractorSettings?.knowledge?.();say('Memory.');return true}
+  return false;
  }
  function route(text,player){const m=activeMode();if(m==='mickey')return root.ExtractorMickeyVoice?.handle?.(text,player);if(['101','301','501'].includes(m))return root.ExtractorX01Voice?.handle?.(text,player);return false}
  function parseResult(text){
   const raw=String(text||''),t=norm(raw);if(!t)return;
   if(t==='hey ricky'){arm();return}
+  if(t.startsWith('hey ricky ')){const command=t.slice(10).trim();if(settingsCommand(command))return;const player=currentPlayer();if(player!==null){armed=true;armedPlayer=player;lastWake=Date.now();const routed=naturalDarts(command);disarm();if(route(routed,player)){paint();scheduleIdle();return}arm();}return}
   if(isSpeaking())return;
   if(!armed||Date.now()-lastWake>=12000){disarm();paint();return}
   const player=currentPlayer();if(player===null||player!==armedPlayer){disarm();paint();return}
-  disarm();if(route(raw,player)){paint();scheduleIdle();return}
+  const routed=naturalDarts(raw);disarm();if(route(routed,player)){paint();scheduleIdle();return}
   armed=true;armedPlayer=player;lastWake=Date.now();say("I didn't get that. Give me the score again, "+names()[player]+'.');paint();
  }
  function scheduleIdle(){
@@ -107,5 +199,5 @@
  function refresh(){if(inGame())start();else stop()}
  root.document?.addEventListener?.('visibilitychange',()=>{if(!enabled)return;if(hidden()){disarm();detach();clearTimeout(restartTimer);restartTimer=null;setPhase('suspended')}else refresh()});
  root.addEventListener?.('pagehide',stop);
- root.ExtractorRicky={start,stop,refresh,retry,wakeNow,inGame,feedForTest:parseResult,isEnabled:()=>enabled,number,getState:()=>({phase,blocked,armed,player:armedPlayer,message:message()})};
+ root.ExtractorRicky={start,stop,refresh,retry,wakeNow,inGame,feedForTest:parseResult,isEnabled:()=>enabled,number,normaliseDartsForTest:naturalDarts,getState:()=>({phase,blocked,armed,player:armedPlayer,message:message()})};
 })();

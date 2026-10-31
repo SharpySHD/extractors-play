@@ -1,13 +1,14 @@
 /* One native media stream: mixed intro, then uninterrupted music through bull-off. */
 (() => {
  const media=document.createElement('video');media.id='experienceMedia';
- media.src='nexus-workprint-15.mp4?v=0110-hotmic1';media.preload='metadata';media.playsInline=true;
+ media.src='nexus-workprint-15.mp4?v=0115-spotify1';media.preload='metadata';media.playsInline=true;
  media.setAttribute('playsinline','');media.setAttribute('aria-label','Extractor Nexus cinematic audio and intro');
  document.body.append(media);
  const introEndSec=97.63333333333334;
- let level=1,fade=1,fadeTimer=null,pendingSeek=null;const ducks=new Set();
+ let level=1,fade=1,fadeTimer=null,pendingSeek=null,mode='always';const ducks=new Set();
  try{const n=localStorage.getItem('extractorExperienceLevel');if(n!==null&&Number.isFinite(Number(n)))level=Math.max(0,Math.min(1,Number(n)))}catch(_){}
- const panel=document.createElement('aside');panel.className='music-controls panel';panel.setAttribute('aria-label','Nexus sound');
+ try{const saved=localStorage.getItem('extractorMusicMode');if(['always','voice','off'].includes(saved))mode=saved}catch(_){}
+ const panel=document.createElement('aside');panel.className='music-controls panel hidden';panel.setAttribute('aria-label','Nexus sound');
  panel.innerHTML=`<div class="music-heading"><b>NEXUS SOUND · FROM 1:45</b><span>Kicks 4 Free · Robbie Muir Remix</span></div><div class="music-row"><button id="musicToggle" type="button">▶ MUSIC</button><label for="musicLevel">SOUND LEVEL <output id="musicLevelValue">${Math.round(level*100)}%</output><input id="musicLevel" type="range" min="0" max="100" value="${Math.round(level*100)}"></label></div><p id="musicStatus" class="tiny" role="status">Tap Play intro or Music to start sound.</p>`;
  document.body.append(panel);const toggle=panel.querySelector('#musicToggle'),status=panel.querySelector('#musicStatus');
  function apply(){media.volume=level*fade*(ducks.size ? 0.35 : 1);media.muted=level===0}
@@ -25,10 +26,10 @@
  }
  function duck(reason,active){if(reason==='intro')return;if(active)ducks.add(reason);else ducks.delete(reason);apply()}
  function setLevel(n){level=Math.max(0,Math.min(1,n));panel.querySelector('#musicLevel').value=Math.round(level*100);panel.querySelector('#musicLevelValue').textContent=Math.round(level*100)+'%';apply();try{localStorage.setItem('extractorExperienceLevel',String(level))}catch(_){}}
+ function setMode(next){if(!['always','voice','off'].includes(next))return mode;mode=next;try{localStorage.setItem('extractorMusicMode',mode)}catch(_){}if(mode==='off')pause();else if(mode==='always')start();return mode}
  function fadeOut(seconds=2){clearInterval(fadeTimer);const began=Date.now(),from=fade;fadeTimer=setInterval(()=>{fade=from*Math.max(0,1-(Date.now()-began)/(Math.max(.1,seconds)*1000));apply();if(fade===0){pause();fade=1;apply()}},40)}
  toggle.onclick=()=>media.paused?start():pause();panel.querySelector('#musicLevel').oninput=e=>setLevel(Number(e.target.value)/100);
  media.addEventListener('error',()=>{toggle.textContent='▶ MUSIC';status.textContent='Sound could not load. Tap Music to retry when connected.'});
  media.addEventListener('ended',()=>{seek(introEndSec);start()});
- document.addEventListener('visibilitychange',()=>{if(document.hidden)pause()});
- apply();window.extractorMusic={media,introEndSec,start,pause,seek,duck,fadeOut,setLevel,getLevel:()=>level};
+ apply();if(mode==='off')pause();window.extractorMusic={media,introEndSec,start,pause,seek,duck,fadeOut,setLevel,getLevel:()=>level,setMode,getMode:()=>mode};
 })();
