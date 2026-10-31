@@ -68,13 +68,13 @@
   try{mic.start();if(recognition===mic&&phase==='starting')startTimer=setTimeout(()=>{if(recognition!==mic||phase!=='starting')return;detach();scheduleRestart('Speech service did not start. Retrying.',1500)},15000)}
   catch(e){if(recognition!==mic)return;detach();if(['NotAllowedError','SecurityError'].includes(e.name)){blocked=true;setPhase('blocked','MIC PERMISSION NEEDED · allow access, then tap Reconnect Mic.')}else{failures++;scheduleRestart('Speech service could not start. Retrying.',Math.min(8000,500*2**Math.min(failures,4)))}}
  }
- function wakeReply(player){
-  const who=names()[player]||'player';const lines=['Yes, '+who+'.','Yeah, '+who+'.','What the fuck, '+who+'.','Go on then, '+who+'.',"I'm listening, "+who+'.','Hit me with it, '+who+'.'];return lines[Math.floor(Math.random()*lines.length)];
+ function wakeReply(){
+  const lines=['What?','What now?','Shoot.','Yeah?','Go on.'];return lines[Math.floor(Math.random()*lines.length)];
  }
  function arm(){
   const player=currentPlayer();if(player===null)return;
   root.stop?.();armed=true;armedPlayer=player;lastWake=Date.now();paint();
-  say(wakeReply(player),()=>{if(armed&&armedPlayer===currentPlayer()){lastWake=Date.now();paint()}});
+  say(wakeReply(),()=>{if(armed&&armedPlayer===currentPlayer()){lastWake=Date.now();paint()}});
   status('Ricky is listening for '+names()[player]+'.');scheduleIdle();
  }
  function route(text,player){const m=activeMode();if(m==='mickey')return root.ExtractorMickeyVoice?.handle?.(text,player);if(['101','301','501'].includes(m))return root.ExtractorX01Voice?.handle?.(text,player);return false}
