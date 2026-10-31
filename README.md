@@ -1,18 +1,23 @@
-# Extractor’s Play — public device test v0.10.8
+# Extractor’s Play — public device test v0.11.8
 
-Current checked game from Jamie Sharp’s 1 November handover, replacing the older v0.1.1 repository app. No Node installation is required on the Windows or Android test device.
+Current public browser test build for Extractor’s Play.
 
-- Nexus home first, settings gear, Mickey Mouse and X01 modes.
-- Ricky wake phrase, active-player routing and current scoring/choice flow.
-- Complete supplied V15 cinematic, followed by continuous music in one native stream; browser-test media encode is reduced for GitHub’s web-upload limit. The full-quality film is retained in the separate checked source package.
-- For this PUBLIC TEST, names, optional photos, profiles, matches and settings stay in each device’s browser. Profiles do not sync between devices. The private HQ profile/file services are not included or exposed.
-- Original private app/server source remains in the separate developer package. This static test does not replace or weaken its authentication.
-- OMNI hardware/software integration is pending; this is a browser scoring/voice test, not an implemented OMNI connection.
-- Real Android microphone and playback must be tested after deployment over HTTPS.
+## Included in v0.11.8
+- Nexus home first; main screen kept to games, players, player-related controls and Start.
+- All other controls live behind the Settings gear.
+- Before the intro, the app asks once for microphone + front-camera permission. Once granted, the intro starts.
+- Ricky is the default MC voice on a fresh device and the hot mic arms when the menu loads, then continuously reconnects while the game tab is active.
+- “Hey Ricky” gives a short reply — e.g. “What?”, “Shoot.”, “Yeah?” — then stays ready for the score/command until handled.
+- Natural dart speech supports forms such as `1 20 1 19 1 18`, `a 20 a 19 an 18`, `give me a 20 a 19 an 18`, plus single/double/triple wording.
+- Saved score is called back, then Ricky may banter afterward.
+- Music settings: Play Always, Voice Controlled, Off.
+- Voice settings commands include music on/off/mode, sound level, Ricky mode, banter, Settings, Spotify, intro, Developer and Knowledge/Memory.
+- Spotify opens/closes inside Settings with “Hey Ricky, open Spotify” / “close Spotify”.
+- “Hey Ricky, register new player” starts a spoken registration flow: name → optional username → “shall I take a selfie?” → yes opens the front camera → “take it” captures and saves.
+- Jordy roast command included with a random roast bank.
+- Dwayno / Duano roast command included with a separate conspiracy-themed roast bank.
 
-Publish these files at repository root using GitHub Pages: Settings → Pages → Deploy from a branch → main → /(root) → Save. No npm build step. Keep media/ as a folder. Upload the extracted files, not the ZIP itself.
+## Public test URL
+https://sharpyshd.github.io/extractors-play/
 
-The video upgrade pass is paused; this test deliberately retains the supplied V15 pictures.
-
-
-Small-upload revision: full phrase dictionary is constructed from the original generation rules instead of downloading a25MB literal. All phrase keys/values are verified identical. Browser-test video is960x540with a smaller bitrate, with unchanged story/audio timing; the separate full-quality film is retained. Use the numbered upload batches one at a time, committing each before the next.
+Upload the files in this package to the repository root and replace matching files. Then commit once. GitHub Pages remains configured from `main` → `/(root)`.

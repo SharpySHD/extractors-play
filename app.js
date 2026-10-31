@@ -25,6 +25,30 @@ function rickyShanghai(){window.ExtractorRecordedRicky?.queue('shanghai');let ch
 function effectSignature(o){return JSON.stringify([Object.entries(o.marks||{}).sort(),Number(o.points)||0])}
 function collapseEquivalentOptions(items){const seen=new Set();return items.filter(o=>{const sig=effectSignature(o);if(seen.has(sig))return false;seen.add(sig);return true})}
 function header(){return `<div class="eyebrow">SHARPHUB DYNAMICS</div><div class="brand">EXTRACTOR'S PLAY</div><div class="subtitle">FEATURING THE BIG FELLA</div>`}
+function ensureRickyDefault(){
+ try{if(!localStorage.getItem('extractorMCVoice'))localStorage.setItem('extractorMCVoice','__ricky__')}catch(_){}
+}
+async function permissionState(name){
+ try{if(!navigator.permissions?.query)return 'prompt';return (await navigator.permissions.query({name})).state}catch(_){return 'prompt'}
+}
+async function primeDevicePermissions(status){
+ let mic=false,camera=false;
+ if(!navigator.mediaDevices?.getUserMedia){if(status)status.textContent='Camera/microphone unavailable in this browser.';return {mic,camera}}
+ try{const a=await navigator.mediaDevices.getUserMedia({audio:true});a.getTracks().forEach(t=>t.stop());mic=true;localStorage.setItem('extractorMicPrimed','1')}catch(_){}
+ try{const v=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}});v.getTracks().forEach(t=>t.stop());camera=true;localStorage.setItem('extractorCameraPrimed','1')}catch(_){}
+ if(status)status.textContent=(mic?'MIC READY':'MIC NOT ALLOWED')+' · '+(camera?'CAMERA READY':'CAMERA NOT ALLOWED');
+ return {mic,camera};
+}
+async function bootPermissions(){
+ ensureRickyDefault();
+ const [m,c]=await Promise.all([permissionState('microphone'),permissionState('camera')]);
+ if(m==='granted'&&c==='granted'){try{localStorage.setItem('extractorMicPrimed','1');localStorage.setItem('extractorCameraPrimed','1')}catch(_){}intro();return}
+ document.body.classList.remove('menu-active','intro-active','bull-active');
+ $('app').innerHTML=`<div class="wrap permission-wrap"><section class="panel permission-panel"><div class="eyebrow">EXTRACTOR'S PLAY · v0.11.8</div><h1>RICKY NEEDS EARS &amp; EYES</h1><p>Allow microphone and camera now. Ricky will be ready when the menu loads, and player selfies can open without stopping the game later.</p><p id="permissionStatus" class="status" role="status">MICROPHONE + CAMERA permission required before the intro.</p><button id="allowDevices" class="primary">🎙 📷 ALLOW MIC + CAMERA</button><button id="continueLimited">CONTINUE WITHOUT ONE OR BOTH</button><p class="tiny">Your browser controls the permission popups. Extractor's Play cannot approve them for you.</p></section></div>`;
+ const go=()=>intro();
+ $('allowDevices').onclick=async()=>{const b=$('allowDevices');b.disabled=true;$('permissionStatus').textContent='Requesting microphone… then camera…';await primeDevicePermissions($('permissionStatus'));b.disabled=false;setTimeout(go,350)};
+ $('continueLimited').onclick=go;
+}
 function requestMenuMic(){
  const note=$('micReady');
  if(!navigator.mediaDevices?.getUserMedia){if(note)note.textContent='MIC unavailable · touch still works';return Promise.resolve(false)}
@@ -32,7 +56,7 @@ function requestMenuMic(){
 }
 function openSettings(){
  const d=$('settingsDialog');if(!d)return;
- d.onclose=()=>stop();d.showModal();
+ d.onclose=()=>window.ExtractorRicky?.refresh?.();d.showModal();
  const level=window.extractorMusic?.getLevel?.()??1;$('settingsVolume').value=Math.round(level*100);$('settingsVolumeValue').textContent=Math.round(level*100)+'%';
 }
 function menu(){
@@ -41,7 +65,7 @@ function menu(){
  if(state.phase==='done'&&state.reviewWaiting){state.reviewWaiting=false;delete state.handoffAt;}
  window.ExtractorStage?.cancel();document.body.classList.remove('bull-active','intro-active');document.body.classList.add('menu-active');state.screen='menu';state.needsBull=false;save();stop();
  $('app').innerHTML=`<div class="nexus-home"><section class="nexus-hero">
-   <div class="nexus-title">${header()}<p class="tiny nexus-version">PUBLIC DEVICE TEST · v0.11.5</p></div>
+   <div class="nexus-title">${header()}<p class="tiny nexus-version">PUBLIC DEVICE TEST · v0.11.8</p></div>
    <button id="settingsButton" class="settings-gear" aria-label="Settings">⚙</button>
    <div class="big-fella-decks" aria-label="Big Fella at the decks"></div>
    <div class="extractor-guard" aria-hidden="true"></div>
@@ -49,7 +73,7 @@ function menu(){
  </section>
  <section class="quick-play panel">
    <button id="profilesButton" class="login-button">◉ PLAYER LOGIN / REGISTER</button>
-   <div id="micReady" class="mic-ready">MIC · tap Login / Register to arm</div>
+   <div id="micReady" class="mic-ready">MIC ON · say "Hey Ricky"</div>
    <div id="menuRoster"></div>
    <h2 class="game-mode-label">CHOOSE YOUR WEAPON</h2>
    <div class="menuButtons" aria-label="Choose a game">
@@ -83,8 +107,9 @@ function menu(){
  $('mickey').onclick=()=>{clearInterval(menuCarouselTimer);beginMickey()};
  window.ExtractorX01?.bindMenu();
  if(!window.ExtractorProfiles?.attachMenu())cue('chooseWeapon');
- const pb=$('profilesButton');if(pb){const original=pb.onclick;pb.onclick=async e=>{await requestMenuMic();original?.call(pb,e)}}
- try{if(localStorage.getItem('extractorMicPrimed')==='1'){ $('micReady').textContent='MIC PERMISSION READY · starts in game'; }}catch(_){}
+ const pb=$('profilesButton');if(pb){const original=pb.onclick;pb.onclick=e=>original?.call(pb,e)}
+ try{if(localStorage.getItem('extractorMicPrimed')==='1'){ $('micReady').textContent='MIC ON · say \"Hey Ricky\"'; }}catch(_){}
+ window.ExtractorRicky?.refresh?.();
 }
 
 function bindMCVoices(){
@@ -105,7 +130,7 @@ function render(){
  <div class="row" style="margin-top:7px"><button data-bull="1" ${state.phase!=='throw'?'disabled':''}>GREEN 25</button><button data-bull="2" ${state.phase!=='throw'?'disabled':''}>RED 50</button><button id="miss" ${state.phase!=='throw'?'disabled':''}>MISS</button></div>
  <div class="row" style="margin-top:8px"><button id="undo">↶ UNDO</button><button id="changeClaim" class="${state.phase==='done'&&state.reviewBase?'':'hidden'}">CHANGE DECISION</button><button id="next" ${state.phase!=='done'?'disabled':''}>NEXT PLAYER →</button></div>
  <div class="tiny" style="margin-top:8px">Manual input • OMNI integration pending • Scores saved on this device</div></section></div>
- <section class="ricky-mic-bar" aria-label="Ricky microphone"><p id="rickyMicStatus" role="status">MIC STARTING · allow microphone access if prompted.</p><button id="rickyMicRetry" type="button">🎙 RECONNECT MIC</button></section><section class="panel voice" id="voicepanel"><div class="row"><span style="font-size:25px;flex:0">🤖</span><div style="flex:5"><b class="cyan" style="font-size:12px">EXTRACTOR VOICE CONTROL · v0.11.5</b><div id="message" class="status">${state.phase==='throw'?'Say your darts, or enter them by touch. Then choose what to take.':state.phase==='choose'?"Selection time.":state.phase==='win'?'GAME OVER!':'Turn scored. Next player.'}</div></div><strong id="seconds" style="text-align:right;flex:0">—</strong></div>
+ <section class="ricky-mic-bar" aria-label="Ricky microphone"><p id="rickyMicStatus" role="status">MIC STARTING · allow microphone access if prompted.</p><button id="rickyMicRetry" type="button">🎙 RECONNECT MIC</button></section><section class="panel voice" id="voicepanel"><div class="row"><span style="font-size:25px;flex:0">🤖</span><div style="flex:5"><b class="cyan" style="font-size:12px">EXTRACTOR VOICE CONTROL · v0.11.8</b><div id="message" class="status">${state.phase==='throw'?'Say your darts, or enter them by touch. Then choose what to take.':state.phase==='choose'?"Selection time.":state.phase==='win'?'GAME OVER!':'Turn scored. Next player.'}</div></div><strong id="seconds" style="text-align:right;flex:0">—</strong></div>
  <div id="choices" class="options ${state.phase==='choose'?'':'hidden'}"></div>
  <div class="row" style="margin-top:7px"><button id="listen" class="primary hidden">🎙️ LAUNCH WHEN READY</button><button id="pause" class="hidden">⏸ WAIT A SEC</button><button id="confirm" class="${state.phase==='choose'?'primary':'hidden'}" ${state.phase==='choose'?'':'disabled'}>✓ CONFIRM CLAIM</button></div>
  <div id="info" class="tiny muted" style="margin-top:7px">Microphone and speech depend on Safari/browser support. Touch controls always work.</div></section></div>`;
@@ -294,7 +319,7 @@ function intro(){
  stop();window.ExtractorStage?.cancel();const sound=window.extractorMusic,video=sound.media;
  sound.pause();sound.seek(0);document.body.classList.remove('menu-active');document.body.classList.add('intro-active');
  const level=sound.getLevel();
- $('app').innerHTML=`<section class="storyboard-wrap intro-wrap"><div class="storyboard-controls"><p id="introStatus" role="status">BETA v0.10.10 TEST · The Nexus experience · turn sound on when ready.</p><div class="row"><button id="playIntro" class="primary">▶ PLAY INTRO WITH SOUND</button><button id="skipIntro">SKIP INTRO →</button></div><label class="intro-volume" for="introVolume">SOUND LEVEL <output id="introVolumeValue">${Math.round(level*100)}%</output><input id="introVolume" type="range" min="0" max="100" value="${Math.round(level*100)}"></label></div></section>`;
+ $('app').innerHTML=`<section class="storyboard-wrap intro-wrap"><div class="storyboard-controls"><p id="introStatus" role="status">BETA v0.11.8 TEST · The Nexus experience · turn sound on when ready.</p><div class="row"><button id="playIntro" class="primary">▶ PLAY INTRO WITH SOUND</button><button id="skipIntro">SKIP INTRO →</button></div><label class="intro-volume" for="introVolume">SOUND LEVEL <output id="introVolumeValue">${Math.round(level*100)}%</output><input id="introVolume" type="range" min="0" max="100" value="${Math.round(level*100)}"></label></div></section>`;
  let leaving=false;
  const leave=()=>{if(leaving)return;leaving=true;video.onplay=null;video.onpause=null;video.ontimeupdate=null;video.onended=null;video.onerror=null;if(document.fullscreenElement)document.exitFullscreen?.().catch(()=>{});menu()};
  $('skipIntro').onclick=()=>{sound.seek(sound.introEndSec);sound.start();leave()};
@@ -324,4 +349,4 @@ window.speechSynthesis?.addEventListener?.('voiceschanged',()=>{if($('mcVoice'))
 // Startup: cinema first on every fresh load, then the Nexus menu and registration.
 // Saved scoring state and profiles remain intact.
 try{state.screen='menu';save()}catch(_){}
-intro();
+bootPermissions();

@@ -1,28 +1,24 @@
-EXTRACTOR'S PLAY - v0.11.1 NATURAL VOICE PATCH
+EXTRACTOR'S PLAY v0.11.8 — ONE CLEAN GITHUB UPLOAD
 
-Upload these 5 files to the ROOT of the GitHub repository:
-  app.js
-  index.html
-  ricky-wake.js
-  sw.js
-  voice-naturalizer.js
+Upload ALL files in this folder to the ROOT of SharpySHD/extractors-play.
+Replace matching files, then commit once.
 
-Replace the existing files with the same names. voice-naturalizer.js is new.
+Files:
+- README.md
+- app.js
+- index.html
+- music.js
+- ricky-wake.js
+- profiles.js
+- stage.js
+- style.css
+- sw.js
+- x01.js
 
-Public test URL after GitHub Pages refreshes:
+Do not upload the ZIP itself into the repo.
+Do not delete media/assets that are already in the repo.
+
+After commit, open:
 https://sharpyshd.github.io/extractors-play/
 
-What this patch changes:
-- Mic remains persistent during gameplay (keeps v0.11.0 behaviour).
-- "Hey Ricky" gets a short reply only: What? / What now? / Shoot. / Yeah? / Go on.
-- Natural dart speech is accepted before the existing parser runs.
-  Examples:
-    1 20 1 19 1 18
-    one twenty one nineteen one eighteen
-    a 20 a 19 an 18
-    give me a 20 a 19 an 18
-    2 20 3 19 1 18
-    20 19 18   (plain 12-20 board numbers default to singles for a 2-3 dart visit)
-- Score is saved first, then Ricky calls the score.
-- After the score call finishes, Ricky may add a short optional banter line.
-- Cache/version bumped to v0.11.1 so browsers fetch the new scripts.
+If an older version remains visible, close the tab completely and reopen the URL. v0.11.8 is printed on the menu/game UI and cache-busting is updated.

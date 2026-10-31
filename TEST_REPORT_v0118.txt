@@ -1,0 +1,16 @@
+EXTRACTOR'S PLAY v0.11.8 - HANDS-FREE / PERMISSIONS TEST REPORT
+
+PASS - JavaScript syntax: app.js, music.js, profiles.js, ricky-wake.js, stage.js, sw.js, x01.js.
+PASS - All visible build labels and cache-bust refs normalised to v0.11.8 / 0118-handsfree1.
+PASS - Menu hot mic starts with Ricky enabled after the intro.
+PASS - Ricky default voice is set on a fresh device without overwriting an existing user choice.
+PASS - Pre-intro permission gate requests microphone then front camera; both tracks are stopped after permission is granted.
+PASS - 'Hey Ricky register new player' routes into the profile registration flow.
+PASS - Voice registration flow uses Ricky's persistent listener: name -> username/skip -> selfie yes/no -> camera -> 'take it' -> save.
+PASS - Dwayno/Duano roast trigger recognised.
+PASS - '1 20 1 19 1 18' normalises to single 20 / single 19 / single 18.
+PASS - 'a 20 a 19 an 18' normalises correctly.
+PASS - '2 20 3 19 1 18' normalises to double 20 / triple 19 / single 18.
+PASS - Existing Settings voice controls, Spotify controls, music modes and Jordy roast bank preserved.
+
+BROWSER LIMITATION - Chrome/Android controls the actual permission dialogs. The app can request mic/camera before the intro but cannot silently approve permissions for the user.

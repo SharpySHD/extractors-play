@@ -43,12 +43,13 @@
  }
  function currentPlayer(){const m=activeMode();if(m==='mickey')return root.ExtractorMickeyVoice?.activePlayer?.()??null;if(['101','301','501'].includes(m))return root.ExtractorX01Voice?.activePlayer?.()??null;return null}
  const inGame=()=>currentPlayer()!==null&&activeMode()!=='menu';
+ const canListen=()=>activeMode()==='menu'||inGame();
  const hidden=()=>!!root.document?.hidden;
  const isSpeaking=()=>!!(root.speechSynthesis?.speaking||root.ExtractorSpeechBusy);
  function say(text,done){if(root.ExtractorSpeak)root.ExtractorSpeak(text,done,'mc');else done?.()}
  function status(text){root.ExtractorMickeyVoice?.status?.(text);root.ExtractorX01Voice?.status?.(text)}
  function message(){
-  if(phase==='listening')return armed?'MIC ON · listening for '+(names()[armedPlayer]||'player')+'’s score.':'MIC ON · say “Hey Ricky”, wait for his reply, then say your score.';
+  if(phase==='listening')return armed?'MIC ON · listening for '+(names()[armedPlayer]||'player')+'’s score.':'MIC ON · always listening. Say “Hey Ricky”, wait for the quick reply, then give your score or command.';
   return {off:'MIC OFF · return to gameplay to start.',starting:'MIC STARTING · allow microphone access if prompted.',reconnecting:'MIC RECONNECTING · '+(detail||'speech service restarting after silence.'),blocked:detail,unsupported:'MIC UNAVAILABLE · this browser has no speech recognition. Use Chrome on Android or touch controls.',suspended:'MIC PAUSED · keep this game tab visible to listen.'}[phase]||detail;
  }
  function paint(){
@@ -63,12 +64,12 @@
  }
  function scheduleRestart(reason='',delay=350){
   clearTimeout(restartTimer);restartTimer=null;
-  if(!enabled||blocked||!inGame())return;
+  if(!enabled||blocked||!canListen())return;
   if(hidden()){setPhase('suspended');return}
   setPhase('reconnecting',reason);restartTimer=setTimeout(()=>{restartTimer=null;connect()},delay);
  }
  function connect(){
-  if(!enabled||blocked||!inGame())return;
+  if(!enabled||blocked||!canListen())return;
   if(hidden()){setPhase('suspended');return}
   if(recognition)return;const Constructor=Speech();
   if(!Constructor){setPhase('unsupported');return}
@@ -94,10 +95,10 @@
  }
  function wakeReply(){const lines=['What?','What now?','Shoot.','Yeah?','Go on.'];return lines[Math.floor(Math.random()*lines.length)]}
  function arm(){
-  const player=currentPlayer();if(player===null)return;
+  const player=currentPlayer();
   root.ExtractorRecordedRicky?.stop();try{root.speechSynthesis?.cancel()}catch(_){}armed=true;armedPlayer=player;lastWake=Date.now();paint();
-  say(wakeReply(player),()=>{if(armed&&armedPlayer===currentPlayer()){lastWake=Date.now();paint()}});
-  status('Ricky is listening for '+names()[player]+'.');scheduleIdle();
+  say(wakeReply(player),()=>{if(armed&&(armedPlayer===null||armedPlayer===currentPlayer())){lastWake=Date.now();paint()}});
+  status(player===null?'Ricky is listening.':'Ricky is listening for '+names()[player]+'.');if(player!==null)scheduleIdle();
  }
  const jordyRoasts=[
   "Jordy couldn't hit water if he fell out of a fucking boat.",
@@ -134,14 +135,32 @@
   "Fridge got cleaned out, Jordy vanished into his room for three days. Coincidence? The carrots reckon otherwise.",
   "All the vegetables went missing and Jordy went into lockdown. I've seen less suspicious behaviour on Border Security.",
   "The veggies disappeared and Jordy didn't surface for three days. Check the crisper drawer for witnesses.",
-  "Jordy's a sausage man. Even the dog disappears for days when he starts getting ideas.",
+  "Jordy's a sausage man. Even the dog disappears for days when he starts cooking up ideas.",
   "Vegetables vanish, Jordy locks himself away, then the dog goes missing. That's not a household, that's a crime documentary.",
-  "Jordy doesn't need Tinder. He's got a sausage, a fridge full of missing produce, and one very nervous dog.",
+  "Jordy doesn't need Tinder. He's got a sausage, a fridge full of missing produce, and a dog that's already packed a bag.",
   "Every time Jordy shuts the bedroom door, the dog starts packing an overnight bag.",
   "The dog hears Jordy say come here mate and immediately applies for witness protection.",
   "Jordy's room has more missing persons reports than the local police station."
  ];
  function jordyRoast(){return jordyRoasts[Math.floor(Math.random()*jordyRoasts.length)]}
+ const dwaynoRoasts=[
+  "Dwayno hears a conspiracy theory and suddenly thinks it's date night.",
+  "Any chick starts talking conspiracies and Dwayno's already pulling his pants down for quiet time.",
+  "Dwayno doesn't need a pickup line. He just waits for someone to say the moon landing was fake.",
+  "Mention chemtrails around Dwayno and he starts tidying the bedroom.",
+  "Dwayno hears 'deep state' and thinks somebody's flirting with him.",
+  "If she says the government is hiding something, Dwayno's hiding his trousers two minutes later.",
+  "Dwayno's love language is apparently Wi-Fi rumours and absolutely no fact checking.",
+  "The bloke doesn't chase women. He just follows the sound of a conspiracy podcast.",
+  "Dwayno hears one sentence about aliens and he's already asking if she wants to see his classified documents.",
+  "Tell Dwayno the earth is flat and he'll try to make the evening horizontal too.",
+  "If nonsense was foreplay, Dwayno would never get out of bed.",
+  "Dwayno sees a red flag and mistakes it for mood lighting.",
+  "His standards aren't low. They're just buried under three hours of conspiracy videos.",
+  "Dwayno's perfect woman has two things: confidence and absolutely no peer-reviewed sources.",
+  "He doesn't ask what star sign she is. He asks which government agency she thinks is listening."
+ ];
+ function dwaynoRoast(){return dwaynoRoasts[Math.floor(Math.random()*dwaynoRoasts.length)]}
  function setMcRicky(on){try{localStorage.setItem('extractorMCVoice',on?'__ricky__':'')}catch(_){}const el=root.document?.getElementById?.('mcVoice');if(el){el.value=on?'__ricky__':'';el.dispatchEvent(new Event('change'))}root.ExtractorRicky?.refresh?.()}
  function setBanter(on){const b=root.ExtractorBanter;if(!b)return false;const current=b.isEnabled?.()!==false;if(current!==on)b.toggle?.();const el=root.document?.getElementById?.('banterToggle');if(el)el.textContent='X-MAN BANTER · '+(b.isEnabled?.()!==false?'ON':'OFF');return true}
  function setSoundPercent(n){n=Math.max(0,Math.min(100,Math.round(n)));root.extractorMusic?.setLevel?.(n/100);const slider=root.document?.getElementById?.('settingsVolume');const out=root.document?.getElementById?.('settingsVolumeValue');if(slider)slider.value=n;if(out)out.textContent=n+'%';return n}
@@ -149,6 +168,8 @@
  function settingsCommand(command){
   const c=norm(command);if(!c)return false;
   if(/(?:tell me something about|what do you reckon about|what do you think about|give .* some shit|roast) jordy/.test(c)){say(jordyRoast());return true}
+  if(/(?:tell me something about|what do you reckon about|what do you think about|give .* some shit|roast) (?:dwayno|duano|dwayne o|dwayneo)/.test(c)){say(dwaynoRoast());return true}
+  if(/^(?:register|add|create) (?:a )?(?:new )?player$|^new player$/.test(c)){if(root.ExtractorProfiles?.startRickyRegistration?.()){return true}say('Player registration is unavailable here.');return true}
   if(/^(?:open|show) settings$/.test(c)){root.ExtractorSettings?.open?.();say('Settings.');return true}
   if(/^(?:close|hide) settings$/.test(c)){root.ExtractorSettings?.close?.();say('Done.');return true}
   if(/^(?:turn |switch )?(?:ricky|ricky mode|chaos mode) on$|^use ricky(?: voice)?$/.test(c)){setMcRicky(true);say('Ricky on.');return true}
@@ -172,10 +193,12 @@
  function parseResult(text){
   const raw=String(text||''),t=norm(raw);if(!t)return;
   if(t==='hey ricky'){arm();return}
-  if(t.startsWith('hey ricky ')){const command=t.slice(10).trim();if(settingsCommand(command))return;const player=currentPlayer();if(player!==null){armed=true;armedPlayer=player;lastWake=Date.now();const routed=naturalDarts(command);disarm();if(route(routed,player)){paint();scheduleIdle();return}arm();}return}
+  if(t.startsWith('hey ricky ')){const command=t.slice(10).trim();if(settingsCommand(command))return;if(root.ExtractorProfiles?.handleRicky?.(command))return;const player=currentPlayer();if(player!==null){armed=true;armedPlayer=player;lastWake=Date.now();const routed=naturalDarts(command);disarm();if(route(routed,player)){paint();scheduleIdle();return}arm();}return}
+  if(root.ExtractorProfiles?.isVoiceFlowActive?.()&&root.ExtractorProfiles?.handleRicky?.(raw))return;
   if(isSpeaking())return;
-  if(!armed||Date.now()-lastWake>=12000){disarm();paint();return}
-  const player=currentPlayer();if(player===null||player!==armedPlayer){disarm();paint();return}
+  if(!armed){paint();return}
+  const player=currentPlayer();if(player===null){if(settingsCommand(raw)||root.ExtractorProfiles?.handleRicky?.(raw)){disarm();paint();return}arm();return}
+  if(player!==armedPlayer){disarm();paint();return}
   const routed=naturalDarts(raw);disarm();if(route(routed,player)){paint();scheduleIdle();return}
   armed=true;armedPlayer=player;lastWake=Date.now();say("I didn't get that. Give me the score again, "+names()[player]+'.');paint();
  }
@@ -189,14 +212,14 @@
   },18000+Math.floor(Math.random()*14000));
  }
  function start(){
-  if(!inGame()){stop();return}enabled=true;
+  if(!canListen()){stop();return}enabled=true;
   const player=currentPlayer();if(lastPlayer!==null&&lastPlayer!==player)disarm();lastPlayer=player;
   paint();if(!blocked&&!recognition&&!restartTimer)connect();if(!idleTimer)scheduleIdle();
  }
  function stop(){enabled=false;pendingWake=false;disarm();lastPlayer=null;clearTimeout(restartTimer);clearTimeout(idleTimer);restartTimer=idleTimer=null;detach();root.ExtractorRecordedRicky?.stop();setPhase('off')}
- function retry(){if(!inGame())return;blocked=false;failures=0;detach();clearTimeout(restartTimer);restartTimer=null;start()}
- function wakeNow(){if(!inGame())return;if(phase==='listening'){arm();return}pendingWake=true;retry()}
- function refresh(){if(inGame())start();else stop()}
+ function retry(){if(!canListen())return;blocked=false;failures=0;detach();clearTimeout(restartTimer);restartTimer=null;start()}
+ function wakeNow(){if(!canListen())return;if(phase==='listening'){arm();return}pendingWake=true;retry()}
+ function refresh(){if(canListen())start();else stop()}
  root.document?.addEventListener?.('visibilitychange',()=>{if(!enabled)return;if(hidden()){disarm();detach();clearTimeout(restartTimer);restartTimer=null;setPhase('suspended')}else refresh()});
  root.addEventListener?.('pagehide',stop);
  root.ExtractorRicky={start,stop,refresh,retry,wakeNow,inGame,feedForTest:parseResult,isEnabled:()=>enabled,number,normaliseDartsForTest:naturalDarts,getState:()=>({phase,blocked,armed,player:armedPlayer,message:message()})};
