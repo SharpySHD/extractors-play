@@ -9,10 +9,11 @@
   const finish=()=>{if(finished)return;finished=true;window.extractorMusic?.duck('stage',false);if(clip===audio)clip=null;if(current===generation)cb?.()};audio.onended=finish;audio.onerror=()=>{if(current===generation)speak(item.text,finish)};audio.play().catch(()=>{if(current===generation)speak(item.text,finish)});
  }
  function bullOff(begin){
+  window.ExtractorRicky?.stop();
   stop();window.ExtractorX01?.stop();cancel();const current=generation;
   document.body.classList.remove('intro-active','menu-active');document.body.classList.add('bull-active');
   window.extractorMusic?.start();
-  $('app').innerHTML=`<section class="bull-screen"><button id="bullBack" class="bull-back">⌂ MENU</button><div class="bull-core"><div class="eyebrow">EXTRACTOR’S PLAY</div><h1>THROWING FOR<br>THE BULL</h1><div class="bull-target" aria-hidden="true"></div><p>Each player throws for the bull.</p><p class="tiny">Select who is closest. If tied, throw again.</p><div class="row"><button id="bullLeft">${playerLabel(0)}<br><small>CLOSEST TO BULL</small></button><button id="bullRight">${playerLabel(1)}<br><small>CLOSEST TO BULL</small></button></div><button id="bullTie">TIE · THROW AGAIN</button><p class="tiny">BETA v0.10.9 · Bull-off winner is entered by touch.</p></div></section>`;
+  $('app').innerHTML=`<section class="bull-screen"><button id="bullBack" class="bull-back">⌂ MENU</button><div class="bull-core"><div class="eyebrow">EXTRACTOR’S PLAY</div><h1>THROWING FOR<br>THE BULL</h1><div class="bull-target" aria-hidden="true"></div><p>Each player throws for the bull.</p><p class="tiny">Select who is closest. If tied, throw again.</p><div class="row"><button id="bullLeft">${playerLabel(0)}<br><small>CLOSEST TO BULL</small></button><button id="bullRight">${playerLabel(1)}<br><small>CLOSEST TO BULL</small></button></div><button id="bullTie">TIE · THROW AGAIN</button><p class="tiny">BETA v0.10.10 · Bull-off winner is entered by touch.</p></div></section>`;
   const announce=()=>{if(current===generation)say('bull')};say('selected',announce);
   $('bullBack').onclick=()=>{cancel();document.body.classList.remove('bull-active');menu()};
   $('bullTie').onclick=()=>say('bull');let decided=false;

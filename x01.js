@@ -16,7 +16,7 @@
  function render(){
   document.body.classList.remove('menu-active');
   const locked=game.phase!=='throw';
-  $('app').innerHTML=`<div class="wrap">${header()}<div class="row" style="margin:12px 0"><button id="xHome">⌂ MENU</button><b style="text-align:center">${game.start} · ROUND ${game.round}</b><button id="xNew">↻ NEW</button></div><p class="tiny" style="text-align:center">BETA v0.10.9 · SINGLE IN · DOUBLE OUT</p>
+  $('app').innerHTML=`<div class="wrap">${header()}<div class="row" style="margin:12px 0"><button id="xHome">⌂ MENU</button><b style="text-align:center">${game.start} · ROUND ${game.round}</b><button id="xNew">↻ NEW</button></div><p class="tiny" style="text-align:center">BETA v0.10.10 · SINGLE IN · DOUBLE OUT</p>
   <div class="scores">${names().map((name,i)=>`<div class="score ${game.turn===i?'active':''}"><div><small class="tiny">REMAINING</small><div>${playerLabel(i)}</div></div><strong>${game.scores[i]}</strong></div>`).join('')}</div>
   <section class="panel"><div class="row"><b class="cyan">${playerLabel(game.turn)} · ${game.darts.length}/3 DARTS</b><small>VISIT START ${game.visitStart}</small></div><div class="pills">${[0,1,2].map(i=>`<div class="pill"><small>DART ${i+1}</small><br>${game.darts[i]?label(game.darts[i]):'—'}</div>`).join('')}</div>
   <p id="xStatus" class="status" role="status">${game.notice}</p>
@@ -24,7 +24,7 @@
   <div class="pad" style="margin-top:10px">${Array.from({length:20},(_,i)=>20-i).map(n=>`<button data-x-n="${n}" ${locked?'disabled':''}>${n}</button>`).join('')}</div>
   <div class="row" style="margin-top:10px"><button data-x-bull="1" ${locked?'disabled':''}>GREEN 25</button><button data-x-bull="2" ${locked?'disabled':''}>RED 50</button><button id="xMiss" ${locked?'disabled':''}>MISS</button></div>
   <div class="row" style="margin-top:10px"><button id="xUndo" ${history.length?'':'disabled'}>↶ UNDO</button><button id="xNext" ${['done','bust'].includes(game.phase)?'':'disabled'}>NEXT PLAYER →</button></div>
-  <div class="row" style="margin-top:10px"><button id="xListen" ${locked?'disabled':''}>🎙️ SAY YOUR DARTS</button><button id="xStop" class="hidden">STOP LISTENING</button></div><p class="tiny" id="xInfo">Say individual darts, for example “triple twenty, single twenty, double ten”. Touch controls also work.</p>
+  <section class="ricky-mic-bar" aria-label="Ricky microphone"><p id="rickyMicStatus" role="status">MIC STARTING · allow microphone access if prompted.</p><button id="rickyMicRetry" type="button">🎙 RECONNECT MIC</button></section><div class="row" style="margin-top:10px"><button id="xListen" ${locked?'disabled':''}>🎙️ SAY YOUR DARTS</button><button id="xStop" class="hidden">STOP LISTENING</button></div><p class="tiny" id="xInfo">Say individual darts, for example “triple twenty, single twenty, double ten”. Touch controls also work.</p>
   <p class="tiny">Below zero, leaving 1, or zero without a double is bust. The whole visit is reset. Red 50 counts as double 25. OMNI is not connected.</p></section></div>`;
   $('xHome').onclick=()=>{stopVoice();active=false;menu()};
   $('xNew').onclick=()=>{if(!confirm('Start a new '+game.start+' game?'))return;stop();stopVoice();game=engine.fresh(game.start);game.needsBull=true;history=[];persist();if(window.ExtractorStage)window.ExtractorStage.bullOff(winner=>{game.turn=winner;game.starter=winner;game.visitStart=game.scores[winner];game.needsBull=false;persist();render()});else render()};
@@ -35,6 +35,7 @@
   $('xUndo').onclick=()=>{if(!history.length)return;if(game.phase==='win')window.ExtractorMemory?.forget(game.memoryId);stop();stopVoice();game=JSON.parse(history.pop());persist();render()};
   $('xNext').onclick=()=>{const s=engine.next(game);if(s===game)return;stop();stopVoice();const scored=game.visitStart-game.scores[game.turn],topic=game.phase==='bust'?'next':scored>=60?'good':scored<20?'low':'next';snapshot();game=s;persist();render();speak(names()[game.turn]+', your turn. '+(window.ExtractorBanter?.pick(topic)||''))};
   $('xListen').onclick=listen;$('xStop').onclick=()=>{stopVoice();render()};
+  window.ExtractorRicky?.refresh();
  }
  function applySpokenScore(total){
   if(!active||game.phase!=='throw'||!Number.isInteger(total)||total<0||total>180)return false;
@@ -53,8 +54,10 @@
   const total=window.ExtractorRicky?.number?.(words);if(Number.isInteger(total))return applySpokenScore(total);
   speak(names()[game.turn]+', give me a score from zero to one eighty, or say the darts.',null,'mc');return true;
  }
- window.ExtractorX01Voice={activePlayer:()=>active&&game?.phase==='throw'?game.turn:null,handle:rickyHandleX01,status:text=>{const el=$('xInfo');if(el)el.textContent=text}};
+ window.ExtractorX01Voice={activePlayer:()=>active&&game&&['throw','done','bust'].includes(game.phase)?game.turn:null,handle:rickyHandleX01,status:text=>{const el=$('xInfo');if(el)el.textContent=text}};
  function listen(){
+  if(window.ExtractorRicky?.inGame?.()){stop();stopVoice();window.ExtractorRicky.wakeNow();return}
+
   if(!active||game.phase!=='throw')return;stop();stopVoice();const current=session;
   const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!Speech){$('xInfo').textContent='Speech recognition unavailable. Use touch controls.';return}

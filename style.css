@@ -122,3 +122,8 @@ body.menu-active{background:linear-gradient(#01060d25,#02081288),url('nexus-aren
 .ricky-recordings{display:grid;gap:6px;grid-column:1/-1}
 .ricky-recordings button{font-size:12px;text-align:left}
 @media(max-width:450px){.quick-play .menuButtons button.game-tile{min-height:132px}.quick-play .tile-copy{font-size:20px}.quick-play .mickey-emblem{transform:scale(.65)}.quick-play .tile-copy small{font-size:8px}}
+
+/* Truthful speech-service state, separate from the permission probe. */
+.ricky-mic-bar{display:flex;align-items:center;gap:10px;justify-content:space-between;margin:10px 0;padding:10px 12px;border:1px solid #3a89a9;border-radius:8px;background:#031524}
+.ricky-mic-bar p{margin:0;font-size:12px;color:#9ee9ff;line-height:1.5}.ricky-mic-bar button{flex-shrink:0;font-size:11px;min-height:44px}
+@media(max-width:450px){.ricky-mic-bar{align-items:stretch;flex-direction:column}}
