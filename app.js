@@ -1,48 +1,129 @@
 
 const $=id=>document.getElementById(id), T=['20','19','18','17','16','15','14','13','12','DOUBLE','TRIPLE','BED','BULL'],N=Array.from({length:20},(_,i)=>20-i);
-let state={screen:'menu',players:[fresh(),fresh()],turn:0,darts:[],mult:1,phase:'throw',round:1},options=[],selected=0,history=[],listening=null,clock=null,token=0;
+let menuCarouselTimer=null;
+let state={screen:'menu',players:[fresh(),fresh()],turn:0,darts:[],mult:1,phase:'throw',round:1},options=[],selected=0,history=[],listening=null,clock=null,handoffClock=null,token=0;
+function playerName(i){return window.ExtractorProfiles?.name(i)||['Challenger','Big Fella'][i]}
+function playerLabel(i){return window.ExtractorProfiles?.escape(playerName(i))||playerName(i)}
 function fresh(){return {points:0,shang:0,marks:{}}}
 try{let saved=JSON.parse(localStorage.getItem('extractorMickeyBeta'));if(saved&&saved.players&&saved.players.length===2)state=saved}catch(e){}
+// A restored review always offers a fresh correction window.
+if(state.phase==='done'&&state.reviewWaiting){state.reviewWaiting=false;delete state.handoffAt;}
 function save(){try{localStorage.setItem('extractorMickeyBeta',JSON.stringify(state))}catch(e){}}
 function snapshot(){history.push(JSON.stringify(state))}
-function stop(){token++;clearInterval(clock);clock=null;if(listening){try{listening.abort()}catch(e){}listening=null}try{speechSynthesis.cancel()}catch(e){}}
-function speak(s,cb){try{if(!('speechSynthesis' in window)){cb?.();return}speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(s);u.lang='en-AU';u.rate=.95;u.onend=()=>cb?.();u.onerror=()=>cb?.();speechSynthesis.speak(u)}catch(e){cb?.()}}
+function stop(){clearTimeout(handoffClock);handoffClock=null;window.extractorMusic?.duck('recognition',false);window.extractorMusic?.duck('speech',false);token++;clearInterval(clock);clock=null;if(listening){try{listening.abort()}catch(e){}listening=null}try{speechSynthesis.cancel()}catch(e){}}
+function speak(s,cb,role='announcer'){try{if(!('speechSynthesis' in window)){cb?.();return}window.ExtractorSpeechBusy=true;speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(s);u.lang='en-AU';u.rate=.95;const available=speechSynthesis.getVoices?.()||[];const preferred=available.find(v=>/^en/i.test(v.lang)&&/\b(Lee|Daniel|Arthur|Gordon|Alex|David|George)\b/i.test(v.name));if(preferred){u.voice=preferred;u.lang=preferred.lang;}if(role==='mc'){let choice='';try{choice=localStorage.getItem('extractorMCVoice')||''}catch(_){}const ricky=choice==='__ricky__';const mc=(ricky?available.find(v=>/^en/i.test(v.lang)&&/\b(Daniel|Arthur|Gordon|Alex|David|George)\b/i.test(v.name)):available.find(v=>v.voiceURI===choice))||available.find(v=>/^en/i.test(v.lang)&&/\b(Lee|Alex|David)\b/i.test(v.name))||preferred;if(mc){u.voice=mc;u.lang=mc.lang}u.pitch=ricky?.92:.8;u.rate=ricky?1.02:.9;}let finished=false;const finish=()=>{if(finished)return;finished=true;window.ExtractorSpeechBusy=false;window.extractorMusic?.duck('speech',false);cb?.()};u.onend=finish;u.onerror=finish;window.extractorMusic?.duck('speech',true);speechSynthesis.speak(u)}catch(e){window.ExtractorSpeechBusy=false;cb?.()}}
+window.ExtractorSpeak=speak;
+// These three cue slots will use Big Fella recordings when supplied.
+function cue(name,cb){if(window.ExtractorStage)return window.ExtractorStage.say(name,cb);speak({chooseWeapon:'Choose your weapon.',selected:'Selected.',selectionTime:'Selection time.'}[name],cb)}
 function marks(n){return n?'X'.repeat(Math.min(n,3)):'—'}
+function targetClosed(key){return state.players.every(p=>(p.marks[key]||0)>=3)}
+function scoreCall(n,cb,name){const value=Math.max(0,Math.min(180,Math.round(Number(n)||0)));let choice='';try{choice=localStorage.getItem('extractorMCVoice')||''}catch(_){}speak(choice==='__ricky__'?String(value)+'. '+(name||playerName(state.turn))+'.':String(value),cb,'mc')}
+function rickyShanghai(){let choice='';try{choice=localStorage.getItem('extractorMCVoice')||''}catch(_){}if(choice==='__ricky__')speak("That's a fucking Shang dog, you goddamn son of a bitch!",null,'mc')}
+function effectSignature(o){return JSON.stringify([Object.entries(o.marks||{}).sort(),Number(o.points)||0])}
+function collapseEquivalentOptions(items){const seen=new Set();return items.filter(o=>{const sig=effectSignature(o);if(seen.has(sig))return false;seen.add(sig);return true})}
 function header(){return `<div class="eyebrow">SHARPHUB DYNAMICS</div><div class="brand">EXTRACTOR'S PLAY</div><div class="subtitle">FEATURING THE BIG FELLA</div>`}
-function menu(){stop();$('app').innerHTML=`<div class="wrap"><section class="menu panel">${header()}<h2 style="text-align:center">SELECT GAME</h2><div class="menuButtons"><button id="mickey" class="primary">🎯 MICKEY MOUSE<br><small>PLAY BETA</small></button><button disabled>501<br><small>COMING LATER</small></button><button disabled>301<br><small>COMING LATER</small></button><button disabled>101<br><small>COMING LATER</small></button><button disabled>🌐 WORLDWIDE<br><small>COMING LATER</small></button><button disabled>👥 FRIENDS ONLINE<br><small>COMING LATER</small></button></div><p class="tiny" style="text-align:center;margin-top:25px">LOCAL 2-PLAYER BETA • TARGET OMNI NOT CONNECTED</p></section></div>`;$('mickey').onclick=()=>{state.screen='game';save();render()}}
+function requestMenuMic(){
+ const note=$('micReady');
+ if(!navigator.mediaDevices?.getUserMedia){if(note)note.textContent='MIC unavailable · touch still works';return Promise.resolve(false)}
+ return navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{stream.getTracks().forEach(t=>t.stop());try{localStorage.setItem('extractorMicPrimed','1')}catch(_){}if(note)note.textContent='MIC READY';return true}).catch(()=>{if(note)note.textContent='MIC permission needed';return false});
+}
+function openSettings(){
+ const d=$('settingsDialog');if(!d)return;
+ d.showModal();
+ const level=window.extractorMusic?.getLevel?.()??1;$('settingsVolume').value=Math.round(level*100);$('settingsVolumeValue').textContent=Math.round(level*100)+'%';
+}
+function menu(){
+ window.ExtractorRicky?.stop();clearInterval(menuCarouselTimer);menuCarouselTimer=null;
+ try{localStorage.setItem('extractorActiveMode','menu')}catch(_){}
+ if(state.phase==='done'&&state.reviewWaiting){state.reviewWaiting=false;delete state.handoffAt;}
+ window.ExtractorStage?.cancel();document.body.classList.remove('bull-active','intro-active');document.body.classList.add('menu-active');state.screen='menu';state.needsBull=false;save();stop();
+ $('app').innerHTML=`<div class="nexus-home"><section class="nexus-hero">
+   <div class="nexus-title">${header()}<p class="tiny nexus-version">PUBLIC DEVICE TEST · v0.10.8</p></div>
+   <button id="settingsButton" class="settings-gear" aria-label="Settings">⚙</button>
+   <div class="big-fella-decks" aria-label="Big Fella at the decks"></div>
+   <div class="extractor-guard" aria-hidden="true"></div>
+   <div class="nexus-screen"><img id="nexusRotator" src="media/nexus-wide.png" alt="Nexus display"><span>NEXUS FEED</span></div>
+ </section>
+ <section class="quick-play panel">
+   <button id="profilesButton" class="login-button">◉ PLAYER LOGIN / REGISTER</button>
+   <div id="micReady" class="mic-ready">MIC · tap Login / Register to arm</div>
+   <div id="menuRoster"></div>
+   <label class="game-mode-label" for="gameMode">GAME MODE</label>
+   <select id="gameMode" class="game-mode-select"><option value="mickey">MICKEY MOUSE</option><option value="501">501</option><option value="301">301</option><option value="101">101</option></select>
+   <button id="startGame" class="primary start-game">START GAME</button>
+ </section>
+ <dialog id="settingsDialog" class="settings-dialog"><div class="settings-head"><strong>SETTINGS</strong><button id="closeSettings" aria-label="Close settings">✕</button></div>
+   <div class="settings-stack">
+    <button id="replayIntro">▶ EXTRACTOR INTRO</button>
+    <button id="banterToggle">X-MAN BANTER · ${window.ExtractorBanter?.isEnabled()?'ON':'OFF'}</button>
+    <div class="mc-voice-control"><label for="mcVoice">X-MAN MC VOICE</label><select id="mcVoice"><option value="">AUTOMATIC · ORIGINAL MC</option><option value="__ricky__">RICKY · CHAOS MODE</option></select><button id="testMC">▶ TEST MC</button></div>
+    <label class="settings-volume" for="settingsVolume">NEXUS SOUND <output id="settingsVolumeValue">100%</output><input id="settingsVolume" type="range" min="0" max="100" value="100"></label>
+    <button id="settingsMusic">▶ / Ⅱ MUSIC</button>
+    <button id="developerButton">DEVELOPER · FILES / INFO / MIC</button>
+    <button id="knowledgeButton">X-MAN KNOWLEDGE &amp; MEMORY</button>
+   </div></dialog></div>`;
+ const rotator=$('nexusRotator'),rot=['media/nexus-wide.png','media/nexus-group.png','media/agent-k-stevie.png','media/extractor-entrance-v1.png','media/big-fella-decks.png'];let ri=0;if(typeof setInterval==='function')menuCarouselTimer=setInterval(()=>{if(!rotator?.isConnected){clearInterval(menuCarouselTimer);return}ri=(ri+1)%rot.length;rotator.src=rot[ri]},4800);
+ $('settingsButton').onclick=openSettings;$('closeSettings').onclick=()=>$('settingsDialog').close();$('replayIntro').onclick=()=>{$('settingsDialog').close();intro()};
+ $('banterToggle').onclick=()=>{$('banterToggle').textContent='X-MAN BANTER · '+(window.ExtractorBanter.toggle()?'ON':'OFF')};
+ $('developerButton').onclick=()=>{$('settingsDialog').close();window.ExtractorDeveloper?.open(menu)};$('knowledgeButton').onclick=()=>{$('settingsDialog').close();window.ExtractorMemory?.open(menu)};
+ $('settingsVolume').oninput=e=>{const v=Number(e.target.value)/100;window.extractorMusic?.setLevel(v);$('settingsVolumeValue').textContent=Math.round(v*100)+'%'};$('settingsMusic').onclick=()=>{const m=window.extractorMusic?.media;if(!m)return;m.paused?window.extractorMusic.start():window.extractorMusic.pause()};
+ bindMCVoices();
+ const beginMickey=()=>{stop();try{localStorage.setItem('extractorActiveMode','mickey')}catch(_){}const begin=winner=>{if(winner!==undefined){state.turn=winner;state.starter=winner;state.needsBull=false}state.screen='game';save();render();window.ExtractorRicky?.refresh()};const freshGame=state.round===1&&state.phase==='throw'&&!state.darts.length&&state.players.every(p=>p.points===0&&Object.keys(p.marks).length===0);if(freshGame&&window.ExtractorStage)window.ExtractorStage.bullOff(begin);else{begin();window.extractorMusic?.fadeOut(2);cue('selected')}};
+ $('startGame').onclick=()=>{clearInterval(menuCarouselTimer);const mode=$('gameMode').value;if(mode==='mickey')beginMickey();else window.ExtractorX01?.open(Number(mode))};
+ window.ExtractorX01?.bindMenu();
+ if(!window.ExtractorProfiles?.attachMenu())cue('chooseWeapon');
+ const pb=$('profilesButton');if(pb){const original=pb.onclick;pb.onclick=async e=>{await requestMenuMic();original?.call(pb,e)}}
+ try{if(localStorage.getItem('extractorMicPrimed')==='1'){ $('micReady').textContent='MIC READY'; requestMenuMic(); }}catch(_){}
+}
+
+function bindMCVoices(){
+ const select=$('mcVoice');if(!select)return;while(select.options.length>2)select.remove(2);let chosen='';try{chosen=localStorage.getItem('extractorMCVoice')||''}catch(_){}for(const voice of (window.speechSynthesis?.getVoices?.()||[]).filter(v=>/^en/i.test(v.lang))){const option=document.createElement('option');option.value=voice.voiceURI;option.textContent=voice.name+' · '+voice.lang;option.selected=voice.voiceURI===chosen;select.append(option)}select.onchange=()=>{localStorage.setItem('extractorMCVoice',select.value);window.ExtractorRicky?.refresh()};$('testMC').onclick=()=>{stop();speak(select.value==='__ricky__'?'Ricky is live. Hey Ricky, wake up. Let us throw some bloody darts.':'Welcome to the Nexus. I am the Extractor. Three darts. One arena. Let us make them count.',null,'mc')};
+}
 function render(){
+ document.body.classList.remove('menu-active');
  if(state.screen==='menu')return menu();
  let [a,b]=state.players;
  $('app').innerHTML=`<div class="wrap">${header()}<div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0"><button id="home" style="padding:5px 9px">⌂ MENU</button><b style="letter-spacing:1px;font-size:12px">MICKEY MOUSE · ROUND ${state.round}</b><button id="new" style="padding:5px 9px">↻ NEW</button></div>
- <div class="scores"><div class="score ${state.turn===0?'active':''}"><div><small class="tiny">LEFT</small><div>CHALLENGER</div></div><strong>${a.points}</strong></div><div class="score ${state.turn===1?'active':''}"><div><small class="tiny">RIGHT</small><div>BIG FELLA</div></div><strong>${b.points}</strong></div></div>
- <div class="grid"><section class="panel"><div class="cyan" style="font-weight:900;font-size:12px;text-align:center">TARGETS · 3 X TO OPEN</div><div class="targetrow tiny"><span>CHALLENGER</span><span>TARGET</span><span>BIG FELLA</span></div>${T.map(k=>`<div class="targetrow"><span class="mark">${marks(a.marks[k]||0)}</span><span class="target">${k}</span><span class="mark">${marks(b.marks[k]||0)}</span></div>`).join('')}<div class="targetrow" style="border-top:1px solid #5ba1cb"><span class="cyan">${a.shang}</span><span class="target">SHANGHAIS</span><span class="cyan">${b.shang}</span></div><div class="tiny" style="text-align:center;margin-top:6px">+100 PER SHANGHAI · BONUS ONLY</div></section>
- <section class="panel"><div class="row"><b class="cyan">THROWS · ${state.turn?'BIG FELLA':'CHALLENGER'}</b><small class="tiny">${state.darts.length}/3</small></div>
+ <div class="scores"><div class="score ${state.turn===0?'active':''}"><div><small class="tiny">LEFT</small><div>${playerLabel(0)}</div></div><strong>${a.points}</strong></div><div class="score ${state.turn===1?'active':''}"><div><small class="tiny">RIGHT</small><div>${playerLabel(1)}</div></div><strong>${b.points}</strong></div></div>
+ ${state.lastClaim?`<div class="claim-receipt" role="status">${window.ExtractorProfiles?.escape(state.lastClaim)||state.lastClaim}</div>`:''}<div class="grid"><section class="panel"><div class="cyan" style="font-weight:900;font-size:12px;text-align:center">TARGETS · 3 X TO OPEN</div><div class="targetrow tiny"><span>${playerLabel(0)}</span><span>TARGET</span><span>${playerLabel(1)}</span></div>${T.map(k=>`<div class="targetrow ${targetClosed(k)?'target-closed':''}"><span class="mark">${marks(a.marks[k]||0)}</span><span class="target">${k}</span><span class="mark">${marks(b.marks[k]||0)}</span></div>`).join('')}<div class="targetrow" style="border-top:1px solid #5ba1cb"><span class="cyan">${a.shang}</span><span class="target">SHANGHAIS</span><span class="cyan">${b.shang}</span></div><div class="tiny" style="text-align:center;margin-top:6px">+100 PER SHANGHAI · BONUS ONLY</div></section>
+ <section class="panel"><div class="row"><b class="cyan">THROWS · ${playerLabel(state.turn)}</b><small class="tiny">${state.darts.length}/3</small></div>
  <div class="pills">${[0,1,2].map(i=>`<div class="pill"><span class="tiny">DART ${i+1}</span><br>${state.darts[i]?dartLabel(state.darts[i]):'—'}</div>`).join('')}</div>
  <div class="row" id="multipliers">${[1,2,3].map(m=>`<button data-m="${m}" class="${state.mult===m?'sel':''}" ${state.phase!=='throw'?'disabled':''}>${['','SINGLE','DOUBLE','TRIPLE'][m]}</button>`).join('')}</div>
- <div class="pad" style="margin-top:7px">${[...N].map(n=>`<button data-num="${n}" ${state.phase!=='throw'?'disabled':''}>${n}</button>`).join('')}</div>
+ <div class="tiny hit-label">HIT ENTRY · 20–12</div><div class="pad mickey-main-pad" style="margin-top:7px">${N.filter(n=>n>=12).map(n=>`<button data-num="${n}" ${state.phase!=='throw'?'disabled':''}>${n}</button>`).join('')}</div>
+ <details class="lower-hits"><summary>OTHER HITS · 11–1</summary><div class="pad">${N.filter(n=>n<12).map(n=>`<button data-num="${n}" ${state.phase!=='throw'?'disabled':''}>${n}</button>`).join('')}</div></details>
  <div class="row" style="margin-top:7px"><button data-bull="1" ${state.phase!=='throw'?'disabled':''}>GREEN 25</button><button data-bull="2" ${state.phase!=='throw'?'disabled':''}>RED 50</button><button id="miss" ${state.phase!=='throw'?'disabled':''}>MISS</button></div>
- <div class="row" style="margin-top:8px"><button id="undo">↶ UNDO</button><button id="next" ${state.phase!=='done'?'disabled':''}>NEXT PLAYER →</button></div>
+ <div class="row" style="margin-top:8px"><button id="undo">↶ UNDO</button><button id="changeClaim" class="${state.phase==='done'&&state.reviewBase?'':'hidden'}">CHANGE DECISION</button><button id="next" ${state.phase!=='done'?'disabled':''}>NEXT PLAYER →</button></div>
  <div class="tiny" style="margin-top:8px">Manual input • OMNI integration pending • Scores saved on this device</div></section></div>
- <section class="panel voice" id="voicepanel"><div class="row"><span style="font-size:25px;flex:0">🤖</span><div style="flex:5"><b class="cyan" style="font-size:12px">EXTRACTOR VOICE CONTROL</b><div id="message" class="status">${state.phase==='throw'?'Throw your darts, then I’ll ask what you take.':state.phase==='choose'?"What's he take?":state.phase==='win'?'GAME OVER!':'Turn scored. Next player.'}</div></div><strong id="seconds" style="text-align:right;flex:0">—</strong></div>
+ <section class="panel voice" id="voicepanel"><div class="row"><span style="font-size:25px;flex:0">🤖</span><div style="flex:5"><b class="cyan" style="font-size:12px">EXTRACTOR VOICE CONTROL · v0.10.8</b><div id="message" class="status">${state.phase==='throw'?'Say your darts, or enter them by touch. Then choose what to take.':state.phase==='choose'?"Selection time.":state.phase==='win'?'GAME OVER!':'Turn scored. Next player.'}</div></div><strong id="seconds" style="text-align:right;flex:0">—</strong></div>
  <div id="choices" class="options ${state.phase==='choose'?'':'hidden'}"></div>
  <div class="row" style="margin-top:7px"><button id="listen" class="primary hidden">🎙️ LAUNCH WHEN READY</button><button id="pause" class="hidden">⏸ WAIT A SEC</button><button id="confirm" class="${state.phase==='choose'?'primary':'hidden'}" ${state.phase==='choose'?'':'disabled'}>✓ CONFIRM CLAIM</button></div>
  <div id="info" class="tiny muted" style="margin-top:7px">Microphone and speech depend on Safari/browser support. Touch controls always work.</div></section></div>`;
  $('home').onclick=()=>{state.screen='menu';save();menu()};
- $('new').onclick=()=>{if(confirm('Start a new game?')){stop();state={screen:'game',players:[fresh(),fresh()],turn:0,darts:[],mult:1,phase:'throw',round:1};history=[];options=[];save();render()}};
+ $('new').onclick=()=>{if(confirm('Start a new game?')){stop();state={screen:'game',players:[fresh(),fresh()],turn:0,darts:[],mult:1,phase:'throw',round:1};history=[];options=[];state.needsBull=true;save();if(window.ExtractorStage)window.ExtractorStage.bullOff(winner=>{state.turn=winner;state.starter=winner;state.needsBull=false;save();render()});else render()}};
  document.querySelectorAll('[data-m]').forEach(el=>el.onclick=()=>{state.mult=+el.dataset.m;save();render()});
  document.querySelectorAll('[data-num]').forEach(el=>el.onclick=()=>add({n:+el.dataset.num,m:state.mult}));
  document.querySelectorAll('[data-bull]').forEach(el=>el.onclick=()=>add({n:'BULL',m:+el.dataset.bull}));
  $('miss').onclick=()=>add({n:'MISS',m:0});
- $('undo').onclick=undo;
- $('next').onclick=()=>{if(state.phase!=='done')return;stop();snapshot();state.choice=0;selected=0;options=[];state.turn=1-state.turn;if(state.turn===0)state.round++;state.darts=[];state.mult=1;state.phase='throw';save();render()};
+ $('undo').onclick=undo;$('changeClaim').onclick=()=>changeDecision();
+ $('next').onclick=()=>{if(state.phase!=='done')return;finishReview()};
  $('listen').onclick=listen;
  $('pause').onclick=pause;
  $('confirm').onclick=commit;
- if(state.phase==='choose'){options=build();selected=Number.isInteger(state.choice)&&state.choice>=0&&state.choice<options.length?state.choice:0;state.choice=selected;save();showOptions();$('listen').classList.remove('hidden')}
+ if(state.phase==='throw'){$('listen').classList.remove('hidden');$('listen').textContent='🎙️ SAY YOUR DARTS';}
+ $('listen').onclick=()=>listen(state.phase==='throw'?'darts':state.phase==='done'?'review':'claim');
+ if(state.phase==='done'&&state.reviewBase){$('listen').classList.remove('hidden');$('listen').textContent='🎙 CHANGE MY CLAIM';}
+ if(state.phase==='done'){$('message').textContent='Tally locked. Change Decision or move to the next player.';}
+ if(state.phase==='choose'){options=collapseEquivalentOptions(build());selected=state.choice===-1?-1:Number.isInteger(state.choice)&&state.choice>=0&&state.choice<options.length?state.choice:-1;state.choice=selected;save();showOptions();if(options.length>1)$('listen').classList.remove('hidden')}
 }
 function dartLabel(d){return d.n==='MISS'?'MISS':d.n==='BULL'?(d.m===2?'RED 50':'GREEN 25'):`${['','S','D','T'][d.m]}${d.n}`}
-function add(d){if(state.phase!=='throw'||state.darts.length>=3)return;snapshot();state.darts.push(d);if(state.darts.length===3){state.phase='choose';state.choice=0;selected=0;save();render();promptDecision()}else{save();render()}}
-function getAllocations(d){if(d.n==='MISS')return [{key:'MISS',marks:0}];if(d.n==='BULL')return [{key:'BULL',marks:d.m}];let result=[{key:String(d.n),marks:d.m}];if(d.m===2)result.push({key:'DOUBLE',marks:1});if(d.m===3)result.push({key:'TRIPLE',marks:1});return result}
+function add(d){
+ if(state.phase!=='throw'||state.darts.length>=3)return;
+ stop();snapshot();state.darts.push(d);state.mult=1;
+ if(state.darts.length===3){state.phase='choose';options=collapseEquivalentOptions(build());if(options.length<=1){selected=0;state.choice=0;save();commit({automatic:true,noChoice:true})}else{selected=-1;state.choice=-1;save();render();$('message').textContent='There is more than one valid result. Say what you will take, or tap a choice.';$('listen').classList.remove('hidden');}}
+ else{save();render()}
+}
+
+function getAllocations(d){if(d.n==='MISS')return [{key:'MISS',marks:0}];if(d.n==='BULL')return [{key:'BULL',marks:d.m}];let result=T.includes(String(d.n))?[{key:String(d.n),marks:d.m}]:d.m===1?[{key:'MISS',marks:0}]:[];if(d.m===2)result.push({key:'DOUBLE',marks:1});if(d.m===3)result.push({key:'TRIPLE',marks:1});return result}
 function shanghai(){let d=state.darts;return d.length===3&&d.every(x=>typeof x.n==='number'&&x.n===d[0].n)&&d.map(x=>x.m).sort().join('')==='123'}
 function bed(){let d=state.darts;return d.length===3&&d.every(x=>x.n!== 'MISS'&&x.n===d[0].n)}
 function calculate(alloc){
@@ -55,34 +136,167 @@ function calculate(alloc){
 function build(){
  let variants=[[]];for(let d of state.darts){let next=[];for(let prev of variants)for(let a of getAllocations(d))next.push([...prev,a]);variants=next}
  if(bed())variants.push([{key:'BED',marks:1}]);
- let seen=new Set();return variants.filter(v=>{let sig=v.map(x=>x.key+':'+x.marks).join('|');if(seen.has(sig))return false;seen.add(sig);return true}).map(calculate);
+ let seen=new Set();return collapseEquivalentOptions(variants.filter(v=>{let sig=v.map(x=>x.key+':'+x.marks).join('|');if(seen.has(sig))return false;seen.add(sig);return true}).map(calculate));
 }
 function showOptions(){
- if(state.phase!=='choose')return;let box=$('choices');box.innerHTML=options.map((o,i)=>`<button class="${selected===i?'sel':''}" data-choice="${i}">OPTION ${i+1}: ${o.alloc.map(x=>x.key==='MISS'?'MISS':x.marks+' × '+x.key).join(' • ')}<small>${o.points?'+'+o.points+' scoring points • ':''}${shanghai()?'+100 Shanghai • ':''}choose this allocation</small></button>`).join('');
+ if(state.phase!=='choose')return;$('confirm').disabled=selected<0;let box=$('choices');box.innerHTML=(state.darts.some(d=>typeof d.n==='number'&&d.n<12)?'<p class="claim-note">Mickey Mouse number targets are 20–12. Lower hits can count toward DOUBLE, TRIPLE or BED; they do not earn number points.</p>':'')+options.map((o,i)=>`<button class="${selected===i?'sel':''}" data-choice="${i}">OPTION ${i+1}: ${o.alloc.map(x=>x.key==='MISS'?'MISS':x.marks+' × '+x.key).join(' • ')}<small>+${o.points} scoring points • ${shanghai()?'+100 Shanghai • ':''}choose this allocation</small></button>`).join('');
  box.querySelectorAll('[data-choice]').forEach(el=>el.onclick=()=>{stop();selected=+el.dataset.choice;state.choice=selected;save();showOptions();$('message').textContent='Option '+(selected+1)+' selected. Confirm claim?';$('seconds').textContent='✓';$('pause').classList.add('hidden');$('listen').classList.add('hidden')})
 }
 function celebration(){let pop=document.createElement('div');pop.className='party';pop.innerHTML='<div>🎉 SHANGHAI! 🎯<small>+100 POINTS</small></div>';document.body.append(pop);setTimeout(()=>pop.remove(),2400)}
 function promptDecision(){
- selected=0;if(shanghai())celebration();
- let text=(shanghai()?'Shanghai! One hundred bonus points! ':'')+"What's he take?";
- let current=++token; $('message').textContent=text;
- speak(text,()=>{if(current===token&&state.phase==='choose')listen()});
+ if(state.phase==='choose'&&state.darts.length===3)commit({automatic:true});
 }
-function listen(){
- if(state.phase!=='choose')return;stop();let current=token,count=10;
- $('listen').classList.add('hidden');$('pause').classList.remove('hidden');$('message').textContent='Listening… what do you take?';$('seconds').textContent='10';
+function changeDecision(index){
+ if(state.phase!=='done'||!state.reviewBase)return;
+ stop();const baseline=JSON.parse(state.reviewBase);state=baseline;state.phase='choose';state.correcting=true;selected=Number.isInteger(index)?index:-1;state.choice=selected;options=build();save();render();
+ if(selected>=0){commit();return}
+ $('message').textContent='Change your claim by voice or touch. The original tally has been rolled back.';
+ $('listen').classList.remove('hidden');
+}
+function beginReview(current,autoListen){
+ if(current!==token||state.phase!=='done'||!state.reviewBase)return;
+ clearTimeout(handoffClock);state.reviewWaiting=false;state.handoffAt=Date.now()+3000;save();scheduleHandoff();
+ if(autoListen)listen('review');
+}
+
+function listen(mode='claim'){
+ if(state.screen!=='game'||(mode==='darts'?state.phase!=='throw':state.darts.length!==3||(mode==='review'?state.phase!=='done'||!state.reviewBase:state.phase!=='choose')))return;
+ stop();const current=token;let consumed=false;if(mode==='review'){state.reviewWaiting=false;if(!Number.isFinite(state.handoffAt))state.handoffAt=Date.now()+3000;scheduleHandoff();if(current!==token||state.phase!=='done')return;}
  const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;
- if(Speech){try{listening=new Speech();listening.lang='en-AU';listening.continuous=true;listening.onresult=e=>{if(current!==token)return;let words=e.results[e.results.length-1][0].transcript.toLowerCase();$('info').textContent='Heard: '+words;if(/wait|hang on|hold on|pause|just a sec/.test(words)){pause();return}
- let x=words.match(/(?:option|number|choice)\s*(\d+)/);let index=x?Number(x[1])-1:-1;
- if(index<0&&/twenties out|take the twenties|all twenties/.test(words))index=options.findIndex(o=>o.alloc.every(x=>x.key==='20'));
- if(index>=0&&index<options.length){selected=index;state.choice=selected;save();stop();showOptions();$('message').textContent='Option '+(index+1)+' selected. Tap Confirm.';$('seconds').textContent='✓';$('pause').classList.add('hidden')}};listening.onerror=()=>{$('info').textContent='Mic unavailable. Tap an option instead.'};listening.start()}catch(e){$('info').textContent='Microphone unavailable here; select by touch.'}}else{$('info').textContent='Browser recognition unsupported. Select by touch.'}
- clock=setInterval(()=>{if(current!==token){clearInterval(clock);return}count--;$('seconds').textContent=count;if(count<=0)pause()},1000);
+ if(!Speech){$('info').textContent='Voice recognition unavailable in this browser. Use touch controls.';return}
+ $('listen').classList.add('hidden');$('pause').classList.remove('hidden');
+ $('message').textContent=mode==='darts'?'Listening: say seven, sixteen, triple twenty, or one hundred and eighty.':mode==='review'?'Tally shown. Say change decision, take a bed, or keep it.':'Listening: say an option number, a target, or confirm.';
+ $('seconds').textContent='🎙';window.extractorMusic?.duck('recognition',true);
+ function finish(message){
+  if(current!==token)return;
+  stop();window.extractorMusic?.duck('recognition',false);
+  if($('listen'))$('listen').classList.remove('hidden');
+  if($('pause'))$('pause').classList.add('hidden');
+  if(message&&$('message'))$('message').textContent=message;
+  if($('seconds'))$('seconds').textContent='—';if(state.phase==='done'&&!state.reviewWaiting)scheduleHandoff();if(message&&$('message'))$('message').textContent=message;
+ }
+ try{
+  const recognition=new Speech();listening=recognition;recognition.lang=ExtractorCommands.language();recognition.continuous=false;recognition.interimResults=false;recognition.maxAlternatives=1;
+  recognition.onresult=e=>{
+   if(current!==token||consumed)return;
+   const result=e.results[e.resultIndex??0];if(!result||result.isFinal===false)return;
+   consumed=true;const words=result[0].transcript;
+   const intent=ExtractorCommands.decision(words);if(intent==='pause'){finish('No worries. Take your time.');if(mode==='review')changeDecision();return}
+   if(mode==='review'&&intent==='change'){finish();changeDecision();listen('claim');return}
+   if(mode==='review'&&intent==='keep'){finish('Tally kept. Next player shortly.');return}
+   if(mode==='darts'){
+    const parsed=ExtractorCommands.darts(words);
+    if(!parsed||parsed.darts.length>3-state.darts.length){finish('Heard: '+words+'. Say individual darts that fit the remaining slots. Nothing added.');return}
+    finish();for(const dart of parsed.darts)add(dart);
+    if(state.phase==='throw'){$('message').textContent='Heard: '+words+'. Darts added.';$('info').textContent='Say the next dart when ready. Undo corrects a mistake.';speak(parsed.darts.map(d=>d.n==='MISS'?'Miss':d.n==='BULL'?(d.m===2?'Red bull':'Green bull'):(d.m===3?'Triple ':d.m===2?'Double ':'')+d.n).join(', '))}
+   }else{
+    const claimOptions=mode==='review'?reviewOptions():options;
+    const match=ExtractorCommands.claim(words,claimOptions,{shanghai:shanghai()}),index=match==='confirm'?selected:match;
+    if(mode==='review'){if(!Number.isInteger(index)||index<0||!claimOptions[index]){finish('Heard: '+words+'. No unique change found. Current tally stays; tap Change Decision or Undo to correct it.');return}finish();changeDecision(index);if($('info'))$('info').textContent='Heard: '+words;return}
+    if(!Number.isInteger(index)||index<0||!options[index]){selected=-1;state.choice=-1;save();showOptions();finish('Heard: '+words+'. No unique claim found. Say take a bed, option one, option two, or tap a choice.');return}
+    finish();selected=index;state.choice=index;save();commit();$('info').textContent='Heard: '+words;
+   }
+  };
+  recognition.onerror=e=>finish(e.error==='not-allowed'?'Microphone permission is needed. Touch controls remain available.':'Voice stopped. Tap the microphone to try again, or use touch.');
+  recognition.onend=()=>{if(!consumed)finish('Listening finished. Tap the microphone when ready.');};
+  recognition.start();clock=setTimeout(()=>finish('Listening finished. Tap the microphone when ready.'),10000);
+ }catch(e){finish('Microphone unavailable. Use touch controls.');}
 }
-function pause(){if(state.phase!=='choose')return;stop();$('message').textContent='No worries. Launch when ready.';$('seconds').textContent='⏸';$('listen').classList.remove('hidden');$('pause').classList.add('hidden')}
-function commit(){
- if(state.phase!=='choose')return;options=build();if(!Number.isInteger(selected)||!options[selected]){selected=0;state.choice=0;save();showOptions();$('message').textContent='Please select a claim and confirm again.';return}stop();snapshot();let o=options[selected],p=state.players[state.turn];p.marks=o.marks;p.points+=o.points+(shanghai()?100:0);if(shanghai())p.shang++;
- let finished=T.every(t=>(p.marks[t]||0)>=3)&&p.points>=state.players[1-state.turn].points;state.phase=finished?'win':'done';save();render();$('message').textContent=finished?'WINNER!':(shanghai()?'+100 Shanghai added. ':'')+'Turn saved. Next player.';speak(finished?'Game over! Winner!':shanghai()?'Shanghai! One hundred points added.':'Turn saved.');
+function pause(){if(!['choose','throw','done'].includes(state.phase))return;stop();$('message').textContent='No worries. Launch when ready.';$('seconds').textContent='⏸';$('listen').classList.remove('hidden');$('pause').classList.add('hidden')}
+function advanceTurn(){
+ state.choice=0;selected=0;options=[];state.turn=1-state.turn;
+ if(state.turn===(state.starter??0))state.round++;
+ state.darts=[];state.mult=1;state.phase='throw';delete state.handoffAt;delete state.reviewBase;delete state.reviewWaiting;delete state.pendingWinner;delete state.correcting;
 }
-function undo(){if(!history.length)return;stop();state=JSON.parse(history.pop());options=[];selected=0;save();render();if(state.phase==='choose'){$('message').textContent='Previous choice restored. Select by touch.';$('listen').classList.remove('hidden')}}
-if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('./sw.js').catch(()=>{});
-render();
+function finishReview(){
+ if(state.phase!=='done')return;stop();
+ if(state.pendingWinner){state.phase='win';state.memoryId??='mickey-'+Date.now()+'-'+Math.random();window.ExtractorMemory?.record(state.memoryId,'Mickey Mouse',[playerName(0),playerName(1)],state.turn,state.players.map(p=>p.points));delete state.reviewBase;delete state.pendingWinner;delete state.reviewWaiting;save();render();speak(playerName(state.turn)+' wins! '+(window.ExtractorBanter?.pick('win')||''));return}
+ advanceTurn();save();render();announceNext();
+}
+function scheduleHandoff(){
+ clearTimeout(handoffClock);
+ if(state.phase!=='done'||state.screen!=='game')return;
+ if(state.reviewWaiting){$('message').textContent='Tally shown. Say change decision or use Undo if needed.';return}
+ if(!Number.isFinite(state.handoffAt)){state.handoffAt=Date.now()+3000;save()}
+ $('message').textContent='Tally shown. Say change decision or use Undo if needed.';
+ $('next').textContent='NEXT PLAYER NOW →';
+ const wait=Math.max(0,state.handoffAt-Date.now());
+ if(!wait){finishReview();return}
+ handoffClock=setTimeout(scheduleHandoff,wait);
+}
+function announceNext(prefix=''){
+ const next=playerName(state.turn);
+ $('message').textContent=prefix+next+", you're up. Say your darts or enter them by touch.";
+ const line=window.ExtractorBanter?.pick(state.nextBanter||'next')||'';delete state.nextBanter;save();speak(prefix+next+', your turn. '+line);
+}
+function reviewOptions(){const players=state.players;try{state.players=JSON.parse(state.reviewBase).players;return build()}finally{state.players=players}}
+function commit(config={}){
+ if(state.phase!=='choose'||state.darts.length!==3)return;
+ options=build();
+ if(!Number.isInteger(selected)||!options[selected]){selected=-1;state.choice=-1;save();showOptions();$('message').textContent='Please choose a claim. No points have been added.';return}
+ stop();if(!state.correcting)snapshot();delete state.correcting;const baseline=JSON.stringify(state);
+ const bonus=shanghai(),o=options[selected],p=state.players[state.turn];
+ const marksAdded=Object.entries(o.marks).filter(([key,value])=>value>(p.marks[key]||0)).map(([key,value])=>key+' +'+(value-(p.marks[key]||0))+' mark'+(value-(p.marks[key]||0)>1?'s':''));
+ const dartTotal=state.darts.reduce((n,d)=>n+(d.n==='MISS'?0:d.n==='BULL'?25*d.m:d.n*d.m),0);
+ state.lastClaim=playerName(state.turn)+': Dart total '+dartTotal+' · '+(marksAdded.join(' · ')||'No new marks')+' · +'+o.points+' scoring points'+(bonus?' · +100 Shanghai bonus':'')+(state.darts.some(d=>typeof d.n==='number'&&d.n<12)?' · 1–11 do not earn number points in Mickey Mouse.':'');
+ p.marks=o.marks;p.points+=o.points+(bonus?100:0);if(bonus)p.shang++;
+ const finished=T.every(t=>(p.marks[t]||0)>=3)&&p.points>=state.players[1-state.turn].points;
+ state.nextBanter=bonus?'shanghai':o.alloc.some(a=>a.key==='BED')?'bed':o.points>=60?'good':o.points===0&&!marksAdded.length?'low':'next';
+ state.phase='done';state.pendingWinner=finished;state.reviewBase=baseline;state.reviewWaiting=false;delete state.handoffAt;
+ save();render();
+ const added=o.points+(bonus?100:0);
+ const announce=()=>{if(bonus)rickyShanghai();else scoreCall(added)};
+ if(config.automatic&&state.darts.every(d=>d.n===20&&d.m===3)&&window.ExtractorStage)window.ExtractorStage.maximum(announce);else announce();
+
+}
+
+
+function rickyHandleMickey(words,requestedPlayer){
+ if(state.screen!=='game')return false;
+ if(Number.isInteger(requestedPlayer)&&requestedPlayer!==state.turn)return false;
+ if(state.phase==='throw'){
+  const parsed=ExtractorCommands.darts(words);
+  if(!parsed||parsed.darts.length>3-state.darts.length){speak(playerName(state.turn)+', for Mickey give me the darts — singles, doubles, triples, beds or bull.',null,'mc');return true}
+  for(const dart of parsed.darts){if(state.phase!=='throw')break;add(dart)}
+  return true;
+ }
+ if(state.phase==='choose'){
+  const match=ExtractorCommands.claim(words,options,{shanghai:shanghai()}),index=match==='confirm'?selected:match;
+  if(!Number.isInteger(index)||index<0||!options[index]){speak(playerName(state.turn)+', tell me what you will take — a double, two doubles, a triple, two triples, a bed, two beds, or the target.',null,'mc');return true}
+  selected=index;state.choice=index;save();commit();return true;
+ }
+ if(state.phase==='done'){
+  const intent=ExtractorCommands.decision(words);
+  if(intent==='change'){changeDecision();return true}
+  if(intent==='keep'||/^(?:next|next player|move on|carry on)$/i.test(String(words).trim())){finishReview();return true}
+ }
+ return false;
+}
+window.ExtractorMickeyVoice={activePlayer:()=>state.screen==='game'&&['throw','choose'].includes(state.phase)?state.turn:null,handle:rickyHandleMickey,status:text=>{if($('info'))$('info').textContent=text}};
+
+function undo(){if(!history.length)return;if(state.phase==='win')window.ExtractorMemory?.forget(state.memoryId);stop();state=JSON.parse(history.pop());options=[];selected=0;save();render();if(state.phase==='choose'){$('message').textContent='Previous choice restored. Select by touch.';$('listen').classList.remove('hidden')}}
+
+function intro(){
+ stop();window.ExtractorStage?.cancel();const sound=window.extractorMusic,video=sound.media;
+ sound.pause();sound.seek(0);document.body.classList.remove('menu-active');document.body.classList.add('intro-active');
+ const level=sound.getLevel();
+ $('app').innerHTML=`<section class="storyboard-wrap intro-wrap"><div class="storyboard-controls"><p id="introStatus" role="status">BETA v0.10.8 TEST · Tap Play for the Nexus experience.</p><div class="row"><button id="playIntro" class="primary">▶ PLAY INTRO WITH SOUND</button><button id="skipIntro">SELECT GAME →</button></div><label class="intro-volume" for="introVolume">SOUND LEVEL <output id="introVolumeValue">${Math.round(level*100)}%</output><input id="introVolume" type="range" min="0" max="100" value="${Math.round(level*100)}"></label></div></section>`;
+ let leaving=false;
+ const leave=()=>{if(leaving)return;leaving=true;video.onplay=null;video.onpause=null;video.ontimeupdate=null;video.onended=null;video.onerror=null;if(document.fullscreenElement)document.exitFullscreen?.().catch(()=>{});menu()};
+ $('skipIntro').onclick=()=>{sound.seek(sound.introEndSec);sound.start();leave()};
+ $('playIntro').onclick=()=>{if(!video.paused){sound.pause();return}try{document.documentElement.requestFullscreen?.().catch(()=>{})}catch(e){}sound.start()};
+ video.onplay=()=>{if(leaving)return;$('playIntro').textContent='Ⅱ PAUSE';$('introStatus').textContent='THE EXTRACTOR NEXUS';document.querySelector('.storyboard-controls').classList.add('playing')};
+ video.onpause=()=>{if(!leaving){$('playIntro').textContent='▶ RESUME WITH SOUND';document.querySelector('.storyboard-controls').classList.remove('playing')}};
+ // Workprint 15 runs to completion, then the game menu takes over immediately.
+ video.ontimeupdate=()=>{if(video.currentTime>=sound.introEndSec)leave()};
+ video.onended=()=>{sound.seek(sound.introEndSec);sound.start();leave()};
+ video.onerror=()=>{if(!leaving)$('introStatus').textContent='Intro could not load. Select Game is still available.'};
+ $('introVolume').oninput=e=>{const n=Number(e.target.value)/100;sound.setLevel(n);$('introVolumeValue').textContent=Math.round(n*100)+'%'};
+}
+
+
+window.speechSynthesis?.addEventListener?.('voiceschanged',()=>{if($('mcVoice'))bindMCVoices()});
+// Startup: Always enter through the Nexus home on a fresh page load.
+// Saved scoring state is preserved in localStorage, but it no longer bypasses the home/settings screen.
+try{state.screen='menu';save()}catch(_){}
+menu();

@@ -1,0 +1,22 @@
+/* Complete original phrase database, generated in-browser from compact rules. */
+(()=>{
+const targets={twenties:'20',nineteens:'19',eighteens:'18',seventeens:'17',sixteens:'16',fifteens:'15',fourteens:'14',thirteens:'13',twelves:'12',double:'DOUBLE',doubles:'DOUBLE',triple:'TRIPLE',triples:'TRIPLE',treble:'TRIPLE',trebles:'TRIPLE',bed:'BED',beds:'BED',bet:'BED',bull:'BULL',bulls:'BULL'};
+const names={20:['twenty','twenties','20','big twenty','big twenties','big 20','big one'],19:['nineteen','nineteens','19'],18:['eighteen','eighteens','18'],17:['seventeen','seventeens','17'],16:['sixteen','sixteens','16'],15:['fifteen','fifteens','15'],14:['fourteen','fourteens','14'],13:['thirteen','thirteens','13'],12:['twelve','twelves','12'],DOUBLE:['double','doubles'],TRIPLE:['triple','triples','treble','trebles'],BED:['bed','beds','bet'],BULL:['bull','bulls','bullseye']};
+const clean=text=>text.toLowerCase().replace(/one hundred (?:and )?eighty/g,'180').replace(/treble/g,'triple').replace(/bull[’']?s[ -]?eye|bullseye/g,'bull').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+const phrases={};
+function add(phrase,canonical){const key=clean(phrase);if(phrases[key]&&phrases[key]!==canonical)throw Error('Conflicting phrase: '+key);phrases[key]=canonical;}
+const starts=['','take','I’ll take','I will take','give me','give us','I want','I would like','can I have','can I get','could I have','could I get','just give me','just give us','oh just I’ll take','I’ll have','I will have','I’ll grab','I will grab','put me down for','put us down for','mark me down for','mark us down for','let me take','let us take','can I take','can we take','I take','we take','gimme','chuck me','chuck us','put us down for','bang me down for','bung me down for','I reckon I will take','I reckon I’ll take','I reckon we’ll take','I’ll go with','I will go with','we’ll go with','we will go with','let’s have','we’ll take','we will take','can you give me','can you give us','could you give me','could you give us','can you put me down for','can you put us down for','could you put me down for','could you put us down for','how about','how about the','how’s about','what about','what about the','make it','make mine','put it on','put me on','put us on','go with','I’ll go','we’ll go','I’ll take the','give me the','give us the','can you give me the','can you give us the','could you give me the','could you give us the'];
+const ends=['','please','thanks','thank you','cheers','mate','please mate','cheers mate','thanks mate','thanks big fella','and the points','and points','with the points','for the points','and the score','for the score','and the scoring','and the Shanghai','and the shangy','and the shangie','and the points mate','and the score mate','and the Shanghai mate'];
+for(const [key,aliases] of Object.entries(names))for(const alias of aliases)for(const start of starts)for(const article of ['','a','the'])for(const end of ends){
+ const bonus=/shang/i.test(end);add([start,article,alias,end].filter(Boolean).join(' '),key.toLowerCase()+(bonus?' shanghai':''));
+}
+for(let n=12;n<=20;n++)for(const start of starts)for(const middle of [`a double a triple and one ${names[n][0]}`,`one ${names[n][0]} a double and a triple`,`a double and one ${names[n][0]} and a treble`])for(const end of ends){
+ add([start,middle,end].filter(Boolean).join(' '),`double triple 1 ${n}`+(/shang/i.test(end)?' shanghai':''));
+}
+for(let n=12;n<=20;n++)for(const category of ['double','triple'])for(const count of [1,2])for(const start of starts)for(const end of ends){
+ const countWord=['','one','two'][count];
+ for(const middle of [`a ${category} and ${countWord} ${names[n][1]}`,`${countWord} ${names[n][1]} and a ${category}`,`a ${category} and ${count} single ${n}s`])add([start,middle,end].filter(Boolean).join(' '),`${category} ${count} ${n}`+(/shang/i.test(end)?' shanghai':''));
+}
+const db={version:'0.10.1',targets,bonusWords:['shanghai','shangy','shangie','shanghi'],fillers:['oh','just','please','thanks','thank','you','the','a','an','mate','cheers','ta','cobber','legend'],pointsWords:['point','points','score','scoring'],examples:["I'll take a bed","Give me 18","How about 16","Can you give me the fourteen","I'll take the big one","Oh just I'll take the twenties and the points","Give me a double a triple and one twenty and the shangy","A triple and two eighteens"],phraseCount:Object.keys(phrases).length,phrases};
+window.ExtractorClaimPhrases=db;
+})();

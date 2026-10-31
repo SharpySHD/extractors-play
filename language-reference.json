@@ -1,0 +1,62 @@
+{
+  "version": "0.9.4",
+  "language": "English",
+  "coverage": "Curated deterministic darts phrases and conversational controls. No whole dictionary has been copied or ingested. Accents and transcripts depend on the browser speech service.",
+  "generatedClaimPhrases": 109350,
+  "controls": {
+    "keep": [
+      "yep mate",
+      "spot on",
+      "lock it in cheers",
+      "nah yeah"
+    ],
+    "change": [
+      "nah mate",
+      "yeah nah",
+      "change my decision please",
+      "that is wrong"
+    ],
+    "pause": [
+      "hang on mate",
+      "give us a sec",
+      "hold up cheers"
+    ]
+  },
+  "claimExamples": [
+    "gimme the twenties and the points",
+    "chuck us a bed mate",
+    "put us down for a triple and two eighteens",
+    "I reckon I’ll take the twenties",
+    "bung me down for a bed cheers"
+  ],
+  "dartExamples": [
+    "double eighteen and two singles",
+    "tops and two single twenties",
+    "madhouse",
+    "maximum"
+  ],
+  "ambiguityRule": "No guessed allocation or reconstructed physical darts from ambiguous aggregate totals. For example, twenty-two is not interpreted as separate hits on twenty and two.",
+  "references": [
+    {
+      "name": "Australian National Dictionary Centre",
+      "url": "https://history.cass.anu.edu.au/centres/andc",
+      "use": "Lexicographic reference for Australian English; no dictionary text copied."
+    },
+    {
+      "name": "Australian National Dictionary beta",
+      "url": "https://australianwords.au/",
+      "use": "Reference location; not bulk ingested."
+    },
+    {
+      "name": "PDC Europe glossary",
+      "url": "https://www.pdc-europe.tv/glossar",
+      "use": "Checked standard physical dart nicknames including tops and madhouse."
+    }
+  ],
+  "nextSteps": [
+    "Collect the developer’s real failed phrases as annotated examples.",
+    "Keep intended darts/claim beside the transcript.",
+    "Run rejection and duplicate-result tests before adding an alias.",
+    "Add other languages only with a dedicated grammar and validated examples."
+  ]
+}

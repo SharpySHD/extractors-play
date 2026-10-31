@@ -1,36 +1,18 @@
-# Extractor’s Play — iPad PWA beta (v0.1.1)
+# Extractor’s Play — public device test v0.10.8
 
-A local two-player **Mickey Mouse only** web app. Other games and online play are disabled menu placeholders. No chat.
+Current checked game from Jamie Sharp’s 1 November handover, replacing the older v0.1.1 repository app. No Node installation is required on the Windows or Android test device.
 
-## Install on an iPad
-1. Create a **new** GitHub repository (do not replace the Nexus repository). Upload the contents of this folder to its main branch.
-2. In repository Settings → Pages select **Deploy from a branch**, main / root, and save.
-3. Visit the resulting HTTPS Pages URL in **Safari on iPad**.
-4. Tap Share → **Add to Home Screen** → Add.
+- Nexus home first, settings gear, Mickey Mouse and X01 modes.
+- Ricky wake phrase, active-player routing and current scoring/choice flow.
+- Complete supplied V15 cinematic, followed by continuous music in one native stream; browser-test media encode is reduced for GitHub’s web-upload limit. The full-quality film is retained in the separate checked source package.
+- For this PUBLIC TEST, names, optional photos, profiles, matches and settings stay in each device’s browser. Profiles do not sync between devices. The private HQ profile/file services are not included or exposed.
+- Original private app/server source remains in the separate developer package. This static test does not replace or weaken its authentication.
+- OMNI hardware/software integration is pending; this is a browser scoring/voice test, not an implemented OMNI connection.
+- Real Android microphone and playback must be tested after deployment over HTTPS.
 
-The home screen app opens to the menu, and Mickey Mouse is the only playable game. The app caches basic files for offline use after a successful HTTPS visit. Game status is stored locally in the browser; it is not cloud synced.
+Publish these files at repository root using GitHub Pages: Settings → Pages → Deploy from a branch → main → /(root) → Save. No npm build step. Keep media/ as a folder. Upload the extracted files, not the ZIP itself.
 
-## Included
-- Local two-player scoring; 20–12, double, triple, bed, one bull row
-- Separate individual X markers, one green bull mark or two red bull marks
-- Tactical allocation after three darts, Shanghai +100 bonus and celebration
-- Voice prompt and optional 10-second speech-recognition window, “wait a sec” pause, “Launch when ready” resume; touch fallback
-- 101, 301, 501 and online/friends disabled placeholders
+The video upgrade pass is paused; this test deliberately retains the supplied V15 pictures.
 
-## Important beta limitations
-- Actual Big Fella voice recording has **not** been incorporated; the prompt currently uses browser speech synthesis.
-- Target OMNI is **not connected** and a supported API is not yet confirmed.
-- Rule variations concerning Bed, Double, Triple, Bull point conversion, endgame and tactical allocation require further validation against Big Fella's specific house rules. The beta supports manual scoring for preliminary testing and should not be used for consequential competitive records.
-- Voice recognition is not guaranteed in iOS Safari or inside ChatGPT previews, and mic permission generally requires the proper web context.
-- The global win condition is provisional. No accounts, network play or chat.
-- Repository deployment and hosting have **not** been performed.
 
-## v0.1.1 fixes
-- Claim choices now persist when returning from the menu or reloading.
-- Every new turn starts with a valid first claim; invalid selections are guarded before scoring.
-- Resumed claims expose the voice launch button.
-- Offline cache cleanup removes only this app's caches.
-- Target OMNI remains unconnected; no scoring-rule changes were made.
-
-## Update the existing app
-Replace the matching files in the existing extractors-play repository with the files in this package, then commit and push. Do not create a second repository. This package has not been deployed.
+Small-upload revision: full phrase dictionary is constructed from the original generation rules instead of downloading a25MB literal. All phrase keys/values are verified identical. Browser-test video is960x540with a smaller bitrate, with unchanged story/audio timing; the separate full-quality film is retained. Use the numbered upload batches one at a time, committing each before the next.
