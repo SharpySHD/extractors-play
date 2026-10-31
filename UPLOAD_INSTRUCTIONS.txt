@@ -1,4 +1,4 @@
-EXTRACTOR'S PLAY v0.12.2 - FULL REPOSITORY UPLOAD
+EXTRACTOR'S PLAY v0.12.3 - FULL REPOSITORY UPLOAD
 
 1. Open the SharpySHD/extractors-play GitHub repository.
 2. Upload the CONTENTS of this folder to the repository root.
@@ -6,7 +6,7 @@ EXTRACTOR'S PLAY v0.12.2 - FULL REPOSITORY UPLOAD
 4. Commit once.
 5. Open https://sharpyshd.github.io/extractors-play/
 6. Close/reopen the tab or hard refresh if an older cached build appears.
-7. Confirm the visible version says v0.12.2.
+7. Confirm the visible version says v0.12.3.
 
 Key test phrases:
 - Hey Ricky

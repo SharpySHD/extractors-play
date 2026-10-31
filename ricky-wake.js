@@ -4,10 +4,15 @@
  let recognition=null,restartTimer=null,idleTimer=null,startTimer=null;
  let enabled=false,blocked=false,armed=false,armedPlayer=null,lastWake=0,pendingWake=false;
  let phase='off',detail='',failures=0,lastPlayer=null,lastRoastTarget=null,roastDepth=0,wakeMusicState=null;
+ let lastOwnSpeech='',lastOwnSpeechEnded=0,lastWakeHeard=0;
  const Speech=()=>root.SpeechRecognition||root.webkitSpeechRecognition;
  const activeMode=()=>{try{return localStorage.getItem('extractorActiveMode')||'menu'}catch(_){return 'menu'}};
  const names=()=>[root.playerName?.(0)||'Player 1',root.playerName?.(1)||'Player 2'];
  const norm=s=>String(s||'').toLowerCase().replace(/[^a-z0-9 ]+/g,' ').replace(/\s+/g,' ').trim();
+ const wakeNames=['ricky','rickey','rickie','rikki','rikky'];
+ function wakeCommand(text){const t=norm(text);if(!t)return null;const words=t.split(' ');for(let i=0;i<Math.min(words.length,4);i++){const w=words[i];if(!['hey','hi','aye','oi'].includes(w))continue;const n=words[i+1]||'';if(wakeNames.includes(n)||n==='tricky'||n==='ricky'){return words.slice(i+2).join(' ')}}if(/^ricky\b/.test(t))return t.replace(/^ricky\s*/,'');return null}
+ function ownEcho(text){const t=norm(text);if(!t||!lastOwnSpeech)return false;if(Date.now()-lastOwnSpeechEnded>1800)return false;if(t===lastOwnSpeech)return true;if(lastOwnSpeech.length>18&&(lastOwnSpeech.includes(t)||t.includes(lastOwnSpeech)))return true;return false}
+ function cutRickyOff(){root.ExtractorInterruptSpeech?.();root.ExtractorRecordedRicky?.stop();try{root.speechSynthesis?.cancel()}catch(_){}root.ExtractorSpeechBusy=false}
  const wordNumber={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19,twenty:20};
  function boardNumber(token){if(/^\d+$/.test(token)){const n=Number(token);return n>=1&&n<=20?n:null}return Object.hasOwn(wordNumber,token)?wordNumber[token]:null}
  function naturalDarts(text){
@@ -62,7 +67,7 @@
   const old=recognition;recognition=null;clearTimeout(startTimer);startTimer=null;
   if(old){old.onstart=old.onresult=old.onerror=old.onend=null;try{old.abort()}catch(_){}}
  }
- function scheduleRestart(reason='',delay=350){
+ function scheduleRestart(reason='',delay=120){
   clearTimeout(restartTimer);restartTimer=null;
   if(!enabled||blocked||!canListen())return;
   if(hidden()){setPhase('suspended');return}
@@ -75,10 +80,10 @@
   if(!Constructor){setPhase('unsupported');return}
   let mic;try{mic=new Constructor()}catch(_){scheduleRestart('Speech service unavailable.',1500);return}
   recognition=mic;const consumed=new Set();
-  mic.lang=root.ExtractorCommands?.language?.()||'en-AU';mic.continuous=true;mic.interimResults=false;mic.maxAlternatives=1;
+  mic.lang=root.ExtractorCommands?.language?.()||'en-AU';mic.continuous=true;mic.interimResults=true;mic.maxAlternatives=3;
   setPhase('starting');
   mic.onstart=()=>{if(recognition!==mic)return;clearTimeout(startTimer);startTimer=null;failures=0;setPhase('listening');if(pendingWake){pendingWake=false;arm()}scheduleIdle()};
-  mic.onresult=e=>{if(recognition!==mic||!enabled||hidden())return;for(let i=e.resultIndex||0;i<e.results.length;i++){const r=e.results[i];if(r&&r.isFinal!==false&&!consumed.has(i)){consumed.add(i);parseResult(r[0]?.transcript||'')}}};
+  mic.onresult=e=>{if(recognition!==mic||!enabled||hidden())return;for(let i=e.resultIndex||0;i<e.results.length;i++){const r=e.results[i];if(!r)continue;let wakeText='';for(let a=0;a<Math.min(r.length||1,3);a++){const tr=r[a]?.transcript||'';if(wakeCommand(tr)!==null){wakeText=tr;break}}if(wakeText&&Date.now()-lastWakeHeard>650){lastWakeHeard=Date.now();handleWake(wakeText);if(r.isFinal!==false)consumed.add(i);continue}if(r.isFinal!==false&&!consumed.has(i)){consumed.add(i);parseResult(r[0]?.transcript||'')}}};
   mic.onerror=e=>{
    if(recognition!==mic)return;
    const error=e.error||'unknown';
@@ -87,7 +92,7 @@
     const text=error==='audio-capture'?'MIC UNAVAILABLE · check the device microphone, then tap Reconnect Mic.':'MIC PERMISSION NEEDED · allow microphone access for this site in your browser, then tap Reconnect Mic.';
     setPhase('blocked',text);status(text);return;
    }
-   detach();failures++;scheduleRestart(error==='network'?'Speech service network error. Retrying.':'Speech service stopped. Retrying.',error==='no-speech'?350:Math.min(8000,500*2**Math.min(failures,4)));
+   detach();failures++;scheduleRestart(error==='network'?'Speech service network error. Retrying.':'Speech service stopped. Retrying.',error==='no-speech'?120:Math.min(8000,500*2**Math.min(failures,4)));
   };
   mic.onend=()=>{if(recognition!==mic)return;recognition=null;clearTimeout(startTimer);startTimer=null;scheduleRestart()};
   try{mic.start();if(recognition===mic&&phase==='starting')startTimer=setTimeout(()=>{if(recognition!==mic||phase!=='starting')return;detach();scheduleRestart('Speech service did not start. Retrying.',1500)},15000)}
@@ -115,7 +120,7 @@
  function arm(){
   pauseMusicForWake();
   const player=currentPlayer();
-  root.ExtractorRecordedRicky?.stop();try{root.speechSynthesis?.cancel()}catch(_){}armed=true;armedPlayer=player;lastWake=Date.now();paint();
+  cutRickyOff();armed=true;armedPlayer=player;lastWake=Date.now();paint();
   say(wakeReply(player),()=>{if(armed&&(armedPlayer===null||armedPlayer===currentPlayer())){lastWake=Date.now();paint()}});
   status(player===null?'Ricky is listening.':'Ricky is listening for '+names()[player]+'.');if(player!==null)scheduleIdle();
  }
@@ -249,10 +254,11 @@
   return false;
  }
  function route(text,player){const m=activeMode();if(m==='mickey')return root.ExtractorMickeyVoice?.handle?.(text,player);if(['101','301','501'].includes(m))return root.ExtractorX01Voice?.handle?.(text,player);return false}
+ function handleWake(text){const command=wakeCommand(text);if(command===null)return false;cutRickyOff();pauseMusicForWake();if(!command){arm();return true}if(settingsCommand(command)){releaseWakeMusicWhenQuiet();return true}if(root.ExtractorProfiles?.handleRicky?.(command)){if(!root.ExtractorProfiles?.isVoiceFlowActive?.())releaseWakeMusicWhenQuiet();return true}const player=currentPlayer();if(player!==null){armed=true;armedPlayer=player;lastWake=Date.now();const routed=naturalDarts(command);disarm();if(route(routed,player)){paint();scheduleIdle();releaseWakeMusicWhenQuiet();return true}arm();return true}arm();return true}
  function parseResult(text){
   const raw=String(text||''),t=norm(raw);if(!t)return;
-  if(t==='hey ricky'){arm();return}
-  if(t.startsWith('hey ricky ')){pauseMusicForWake();const command=t.slice(10).trim();if(settingsCommand(command)){releaseWakeMusicWhenQuiet();return}if(root.ExtractorProfiles?.handleRicky?.(command)){if(!root.ExtractorProfiles?.isVoiceFlowActive?.())releaseWakeMusicWhenQuiet();return}const player=currentPlayer();if(player!==null){armed=true;armedPlayer=player;lastWake=Date.now();const routed=naturalDarts(command);disarm();if(route(routed,player)){paint();scheduleIdle();releaseWakeMusicWhenQuiet();return}arm();}return}
+  if(handleWake(raw))return;
+  if(ownEcho(raw))return;
   if(root.ExtractorProfiles?.isVoiceFlowActive?.()&&root.ExtractorProfiles?.handleRicky?.(raw)){if(!root.ExtractorProfiles?.isVoiceFlowActive?.())releaseWakeMusicWhenQuiet();return}
   if(isSpeaking())return;
   if(!armed){paint();return}
@@ -279,7 +285,9 @@
  function retry(){if(!canListen())return;blocked=false;failures=0;detach();clearTimeout(restartTimer);restartTimer=null;start()}
  function wakeNow(){if(!canListen())return;if(phase==='listening'){arm();return}pendingWake=true;retry()}
  function refresh(){if(canListen())start();else stop()}
- root.document?.addEventListener?.('visibilitychange',()=>{if(!enabled)return;if(hidden()){disarm();detach();clearTimeout(restartTimer);restartTimer=null;setPhase('suspended')}else refresh()});
+ root.addEventListener?.('extractor-speech-start',e=>{lastOwnSpeech=norm(e?.detail?.text||'')});
+ root.addEventListener?.('extractor-speech-end',e=>{lastOwnSpeech=norm(e?.detail?.text||lastOwnSpeech);lastOwnSpeechEnded=Date.now()});
+  root.document?.addEventListener?.('visibilitychange',()=>{if(!enabled)return;if(hidden()){disarm();detach();clearTimeout(restartTimer);restartTimer=null;setPhase('suspended')}else refresh()});
  root.addEventListener?.('pagehide',stop);
  root.ExtractorRicky={start,stop,refresh,retry,wakeNow,inGame,feedForTest:parseResult,isEnabled:()=>enabled,number,normaliseDartsForTest:naturalDarts,getState:()=>({phase,blocked,armed,player:armedPlayer,message:message()})};
 })();

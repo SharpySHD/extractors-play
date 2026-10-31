@@ -1,0 +1,17 @@
+Extractor's Play v0.12.3 listening / barge-in regression report
+
+PASS - Web Speech recognizer remains continuous.
+PASS - interimResults enabled for faster wake detection.
+PASS - maxAlternatives increased to 3 for wake-word recovery.
+PASS - fuzzy wake variants supported: hey/hi/aye/oi + Ricky/Rickey/Rickie/Rikki/Rikky; plain Ricky also accepted.
+PASS - wake phrase is inspected before normal score routing, including interim transcripts.
+PASS - wake phrase immediately interrupts speech synthesis and recorded Ricky audio.
+PASS - own spoken game prompts are fingerprinted and ignored briefly after playback to prevent echo loops.
+PASS - non-wake input while Ricky is speaking is ignored, preventing prompt vocabulary from becoming player darts.
+PASS - recognizer restart delay reduced after silence/error.
+PASS - natural dart parser retained: 1 20 / a 20 / double 20 / 2 20 / triple 19 / 3 19.
+PASS - bare double/triple still require a following board number.
+PASS - score, roast, settings, Spotify, mic/camera and registration features retained from v0.12.2.
+PASS - service worker cache key bumped to v0.12.3.
+
+Note: browser Web Speech APIs do not expose a microphone sensitivity/gain setting. This build improves effective responsiveness through interim recognition, alternatives, fuzzy wake matching, rapid restart and barge-in priority.
