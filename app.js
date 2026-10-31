@@ -42,7 +42,7 @@ function menu(){
    <button id="settingsButton" class="settings-gear" aria-label="Settings">⚙</button>
    <div class="big-fella-decks" aria-label="Big Fella at the decks"></div>
    <div class="extractor-guard" aria-hidden="true"></div>
-   <div class="nexus-screen"><img id="nexusRotator" src="media/nexus-wide.png" alt="Nexus display"><span>NEXUS FEED</span></div>
+   <div class="nexus-screen"><img id="nexusRotator" src="nexus-wide.png" alt="Nexus display"><span>NEXUS FEED</span></div>
  </section>
  <section class="quick-play panel">
    <button id="profilesButton" class="login-button">◉ PLAYER LOGIN / REGISTER</button>
@@ -62,7 +62,7 @@ function menu(){
     <button id="developerButton">DEVELOPER · FILES / INFO / MIC</button>
     <button id="knowledgeButton">X-MAN KNOWLEDGE &amp; MEMORY</button>
    </div></dialog></div>`;
- const rotator=$('nexusRotator'),rot=['media/nexus-wide.png','media/nexus-group.png','media/agent-k-stevie.png','media/extractor-entrance-v1.png','media/big-fella-decks.png'];let ri=0;if(typeof setInterval==='function')menuCarouselTimer=setInterval(()=>{if(!rotator?.isConnected){clearInterval(menuCarouselTimer);return}ri=(ri+1)%rot.length;rotator.src=rot[ri]},4800);
+ const rotator=$('nexusRotator'),rot=['nexus-wide.png','nexus-group.png','agent-k-stevie.png','extractor-entrance-v1.png','big-fella-decks.png'];let ri=0;if(typeof setInterval==='function')menuCarouselTimer=setInterval(()=>{if(!rotator?.isConnected){clearInterval(menuCarouselTimer);return}ri=(ri+1)%rot.length;rotator.src=rot[ri]},4800);
  $('settingsButton').onclick=openSettings;$('closeSettings').onclick=()=>$('settingsDialog').close();$('replayIntro').onclick=()=>{$('settingsDialog').close();intro()};
  $('banterToggle').onclick=()=>{$('banterToggle').textContent='X-MAN BANTER · '+(window.ExtractorBanter.toggle()?'ON':'OFF')};
  $('developerButton').onclick=()=>{$('settingsDialog').close();window.ExtractorDeveloper?.open(menu)};$('knowledgeButton').onclick=()=>{$('settingsDialog').close();window.ExtractorMemory?.open(menu)};

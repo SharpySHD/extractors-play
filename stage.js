@@ -21,7 +21,7 @@
  }
  function maximum(done){
   cancel();const current=generation;overlay=document.createElement('div');overlay.className='maximum-screen';
-  overlay.innerHTML=`<video playsinline preload="auto" aria-label="Three darts hit triple twenty with a close-up and smoke" src="media/maximum-180-v3.mp4"></video><strong>180</strong><button>CONTINUE →</button>`;document.body.append(overlay);
+  overlay.innerHTML=`<video playsinline preload="auto" aria-label="Three darts hit triple twenty with a close-up and smoke" src="maximum-180-v3.mp4"></video><strong>180</strong><button>CONTINUE →</button>`;document.body.append(overlay);
   const video=overlay.querySelector('video');clip=video;let finished=false;
   const finish=()=>{if(finished||current!==generation)return;finished=true;cancel();done?.()};overlay.querySelector('button').onclick=finish;video.onended=finish;video.onerror=finish;
   // No score or game state is changed by the celebration.

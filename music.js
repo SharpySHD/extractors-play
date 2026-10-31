@@ -1,7 +1,7 @@
 /* One native media stream: mixed intro, then uninterrupted music through bull-off. */
 (() => {
  const media=document.createElement('video');media.id='experienceMedia';
- media.src='media/nexus-workprint-15.mp4?v=0108-public-small1';media.preload='metadata';media.playsInline=true;
+ media.src='nexus-workprint-15.mp4?v=0108-public-flat1';media.preload='metadata';media.playsInline=true;
  media.setAttribute('playsinline','');media.setAttribute('aria-label','Extractor Nexus cinematic audio and intro');
  document.body.append(media);
  const introEndSec=97.63333333333334;
