@@ -48,7 +48,7 @@
  }
  function currentPlayer(){const m=activeMode();if(m==='mickey')return root.ExtractorMickeyVoice?.activePlayer?.()??null;if(['101','301','501'].includes(m))return root.ExtractorX01Voice?.activePlayer?.()??null;return null}
  const inGame=()=>currentPlayer()!==null&&activeMode()!=='menu';
- const canListen=()=>activeMode()==='menu'||inGame();
+ const canListen=()=>!root.ExtractorChatPaused&&(activeMode()==='menu'||inGame());
  const hidden=()=>!!root.document?.hidden;
  const isSpeaking=()=>!!(root.speechSynthesis?.speaking||root.ExtractorSpeechBusy);
  function say(text,done){if(root.ExtractorSpeak)root.ExtractorSpeak(text,done,'mc');else done?.()}
@@ -316,6 +316,7 @@
  function route(text,player){const m=activeMode();if(m==='mickey')return root.ExtractorMickeyVoice?.handle?.(text,player);if(['101','301','501'].includes(m))return root.ExtractorX01Voice?.handle?.(text,player);return false}
  function handleWake(text){const command=wakeCommand(text);if(command===null)return false;if(roastLoopTarget)stopRoastLoop(false);cutRickyOff();pauseMusicForWake();if(!command){if(!wakeLocked){arm(true);queueWakeAck()}return true}cancelWakeAck();if(settingsCommand(command)){clearWakeLock();releaseWakeMusicWhenQuiet();return true}if(root.ExtractorProfiles?.handleRicky?.(command)){if(!root.ExtractorProfiles?.isVoiceFlowActive?.()){clearWakeLock();releaseWakeMusicWhenQuiet()}return true}const player=currentPlayer();if(player!==null){armed=true;armedPlayer=player;lastWake=Date.now();const routed=naturalDarts(command);disarm();if(route(routed,player)){clearWakeLock();paint();scheduleIdle();releaseWakeMusicWhenQuiet();return true}arm();return true}arm();return true}
  function parseResult(text){
+  if(root.ExtractorChatPaused)return;
   const raw=String(text||''),t=norm(raw);if(!t)return;
   if(roastLoopTarget&&/^(?:shut up|ricky shut up|that s enough|thats enough|stop roasting|stop it|enough)$/.test(t)){stopRoastLoop(false);say('Righto.');return}
   if(handleWake(raw))return;
@@ -352,3 +353,4 @@
  root.addEventListener?.('pagehide',stop);
  root.ExtractorRicky={start,stop,refresh,retry,wakeNow,inGame,feedForTest:parseResult,isEnabled:()=>enabled,number,normaliseDartsForTest:naturalDarts,getState:()=>({phase,blocked,armed,player:armedPlayer,roastLoopTarget,lastRoastTarget,message:message()})};
 })();
+

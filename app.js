@@ -279,6 +279,7 @@ function finishReview(){
  advanceTurn();save();render();announceNext();
 }
 function scheduleHandoff(){
+ if(window.ExtractorChatPaused)return;
  clearTimeout(handoffClock);
  if(state.phase!=='done'||state.screen!=='game')return;
  if(state.reviewWaiting){$('message').textContent='Tally shown. Say change decision or use Undo if needed.';return}
@@ -362,6 +363,18 @@ function intro(){
 }
 
 
+// Hold the current turn while the private HQ room is open.
+window.ExtractorPauseForChat=()=>{
+ const remaining=Number.isFinite(state.handoffAt)?Math.max(0,state.handoffAt-Date.now()):null;
+ stop();window.ExtractorX01?.stop();window.ExtractorRicky?.stop();
+ let resumed=false;
+ return ()=>{
+  if(resumed)return;resumed=true;
+  if(remaining!==null)state.handoffAt=Date.now()+remaining;
+  if(state.screen==='game'&&state.phase==='done')scheduleHandoff();
+  window.ExtractorRicky?.refresh?.();
+ };
+};
 window.ExtractorSettings={
  open:()=>{const d=$('settingsDialog');if(d&&!d.open)d.showModal()},
  close:()=>{const d=$('settingsDialog');if(d?.open)d.close()},
@@ -378,3 +391,4 @@ window.speechSynthesis?.addEventListener?.('voiceschanged',()=>{if($('mcVoice'))
 // Saved scoring state and profiles remain intact.
 try{state.screen='menu';save()}catch(_){}
 bootPermissions();
+
